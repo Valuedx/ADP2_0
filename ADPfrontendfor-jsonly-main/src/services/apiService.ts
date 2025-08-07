@@ -56,7 +56,7 @@ export const apiService = {
   filterDocuments: async (userId: string, date: string) => {
     return apiClient('/document-filter/', {
       method: 'POST',
-      body: JSON.stringify({ user_id: userId, date }),
+      body: JSON.stringify({ userid: userId, date }),
     });
   },
   uploadDocument: async (
