@@ -4,7 +4,7 @@ import { useDispatch } from 'react-redux';
 import { setAuthData, updateUsageStats } from '../store/authSlice';
 import { useNavigate } from 'react-router-dom';
 import useBranding from '@/hooks/useBranding';
-import { apiService } from '@/services/apiService';
+import { apiService, LoginResponse } from '@/services/apiService';
 import { useErrorHandler } from '@/hooks/useErrorHandler';
 
 const Login = () => {
@@ -64,8 +64,17 @@ const Login = () => {
 
     try {
       if (isSignIn) {
-        const data = await apiService.login(username, password);
-        const { access, refresh, username: respUsername, userType, id } = data;
+        const data = (await apiService.login(
+          username,
+          password
+        )) as LoginResponse;
+        const {
+          access,
+          refresh,
+          username: respUsername,
+          userType,
+          id,
+        } = data;
         setPopupMessage(`Login successful! Welcome ${respUsername}`);
 
         dispatch(

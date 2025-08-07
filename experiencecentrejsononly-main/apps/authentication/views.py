@@ -126,7 +126,8 @@ class LoginView(APIView):
                     'access': str(refresh.access_token),
                     'username': username,
                     'id': user.id,
-                    'user_type': user.user_type,
+                    # Use camelCase to match frontend expectations
+                    'userType': user.user_type,
                     'message': 'Login successful'
                 }, status=status.HTTP_200_OK)
             else:
