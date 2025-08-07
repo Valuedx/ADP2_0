@@ -12,6 +12,45 @@ import { updateUsageStats } from '../store/authSlice';
 import type { RootState } from '@/store';
 import ProcessingProgress from './ProcessingProgress';
 
+// Normalize different backend response shapes
+type UploadResponse = {
+  document_id?: string;
+  documentId?: string;
+  pages_processed?: number;
+  pagesProcessed?: number;
+  is_full_document?: boolean;
+  isFullDocument?: boolean;
+  progress_messages?: string[];
+  progressMessages?: string[];
+  usage_info?: unknown;
+  usageInfo?: unknown;
+  can_load_full_document?: boolean;
+  canLoadFullDocument?: boolean;
+  [key: string]: unknown;
+};
+
+const normalizeUploadResponse = (response: unknown): UploadResponse => {
+  const data =
+    (response as { data?: UploadResponse })?.data ||
+    (response as UploadResponse) ||
+    {};
+  return {
+    ...data,
+    document_id: (data.document_id ?? data.documentId) as string | undefined,
+    pages_processed: (data.pages_processed ?? data.pagesProcessed) as
+      | number
+      | undefined,
+    is_full_document: (data.is_full_document ?? data.isFullDocument) as
+      | boolean
+      | undefined,
+    progress_messages: (data.progress_messages ?? data.progressMessages ?? []) as
+      string[],
+    usage_info: data.usage_info ?? data.usageInfo,
+    can_load_full_document: (data.can_load_full_document ??
+      data.canLoadFullDocument) as boolean | undefined,
+  };
+};
+
 interface FileUploaderProps {
   onFileUpload: (file: File) => void;
 }
@@ -67,7 +106,7 @@ const FileUploader = ({ onFileUpload }: FileUploaderProps) => {
     setProgressMessages(['Starting document processing...']);
 
     try {
-      const response = prompt.trim()
+      const rawResponse = prompt.trim()
         ? await apiService.uploadDocument(
             file,
             doc_type,
@@ -80,6 +119,8 @@ const FileUploader = ({ onFileUpload }: FileUploaderProps) => {
             processFullDocument
           );
       onFileUpload(file);
+
+      const response = normalizeUploadResponse(rawResponse);
 
       if (response && response.document_id) {
         const documentId = String(response.document_id);
