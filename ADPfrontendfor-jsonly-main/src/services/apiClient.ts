@@ -3,6 +3,22 @@ import { store } from '@/store';
 
 const getAccessToken = () => store.getState().auth.accessToken;
 
+// Recursively replace `user_type` keys with `userType`
+const normalizeUserType = (data: unknown): unknown => {
+  if (Array.isArray(data)) {
+    return data.map(normalizeUserType);
+  }
+  if (data && typeof data === 'object') {
+    return Object.fromEntries(
+      Object.entries(data as Record<string, unknown>).map(([key, value]) => [
+        key === 'user_type' ? 'userType' : key,
+        normalizeUserType(value),
+      ])
+    );
+  }
+  return data;
+};
+
 export const apiClient = async (
   endpoint: string,
   options: RequestInit = {},
@@ -50,6 +66,7 @@ export const apiClient = async (
     return null;
   }
 
-  return response.json();
+  const data = await response.json();
+  return normalizeUserType(data);
 };
 

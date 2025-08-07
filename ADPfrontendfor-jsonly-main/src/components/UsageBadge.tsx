@@ -2,6 +2,7 @@ interface Props {
   current: number;
   max: number | null;
   className?: string;
+  userType?: string;
 }
 
 const UsageBadge = ({ current, max, className = '' }: Props) => (

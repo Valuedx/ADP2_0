@@ -20,7 +20,7 @@ I would like to upgrade my account to Power User for unlimited document processi
 
 Current Usage:
 - Documents Processed: ${userStats.documents_processed}/${userStats.max_documents_allowed}
-- Account Type: ${userStats.user_type}
+- Account Type: ${userStats.userType}
 
 Please let me know the next steps.
 
