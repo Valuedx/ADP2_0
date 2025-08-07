@@ -1,0 +1,46 @@
+# Changelog
+
+All notable changes to this project are documented here.
+
+- f3eb266 Original repo
+- 045f823 Remove RenderJsonToHtmlView
+- adfc0eb Merge pull request #1 from Valuedx/codex/remove-renderjsontohtmlview-and-related-entries
+- 6fcefe3 Remove HTML conversion from UploadAndProcessFileView
+- ce513db Merge pull request #2 from Valuedx/codex/remove-html-conversion-from-uploadandprocessfileview
+- c8cc8af Remove html_content field and update related code
+- 541075a Merge pull request #3 from Valuedx/codex/remove-html_content-from-imageapp1
+- 4b3df44 Remove json_to_html_prompt
+- 48349e1 Merge pull request #4 from Valuedx/codex/remove-json_to_html_prompt-section
+- 3c78536 Update DocumentSerializer
+- 2b42e6a Merge pull request #5 from Valuedx/codex/update-serializers.py-for-imageapp1
+- 8b90d3c Remove duplicate logger and update imports
+- 7f0d6dd Merge pull request #6 from Valuedx/codex/consolidate-logging-module-and-imports
+- a213e99 Fix permission for profile details
+- b1fba29 Merge pull request #7 from Valuedx/codex/add-permission_classes-to-views
+- 77cb985 Use env vars for DB config
+- 284ee44 Merge pull request #8 from Valuedx/codex/replace-hardcoded-values-with-os.getenv-calls
+- e96f624 Validate Fernet key
+- 0144713 Merge pull request #9 from Valuedx/codex/add-error-handling-for-fernet-key
+- f37bc1c Remove unused imports flagged by pyflakes
+- b927ca3 Merge pull request #10 from Valuedx/codex/remove-unused-imports-from-modules
+- 93135e1 Use uuid filenames for uploads
+- 5964ea6 Merge pull request #11 from Valuedx/codex/add-unique-filename-generation
+- 785aab5 Add exception logging helper and refactor views
+- 327680f Merge pull request #12 from Valuedx/codex/add-helper-for-logging-tracebacks
+- 4e33d07 Improve safe_json_load markdown handling
+- e3342cb Merge pull request #13 from Valuedx/codex/fix-unsafe-json-parsing-logic
+- b5c3f54 Fix missing import of log_exceptions
+- 6e17557 Merge pull request #14 from Valuedx/codex/check-log_exceptions-related-imports
+- 04df4c7 Add README and update env example
+- 600f95b Merge pull request #15 from Valuedx/codex/create-detailed-readme-and-example-.env-file
+- 49ac898 Add changelog summarizing commit history
+- 684df39 Load env variables in settings
+- b1ecb29 Merge pull request #18 from Valuedx/codex/add-dotenv-support-to-settings.py
+- 9f6e391 Merge pull request #16 from Valuedx/codex/create-change-log-file
+- 12efaf5 Include original filename in upload
+- ef28707 Merge pull request #19 from Valuedx/codex/prepend-original-filename-to-uuid
+- d346911 Enforce admin checks on document views
+- 94a02f0 Merge pull request #20 from Valuedx/codex/update-privilege-checks-in-views
+- a8c9917 Add metrics fields to Document
+- 50d2bfb Merge pull request #21 from Valuedx/codex/update-code-to-save-timing-data
+- 7707b43 Document API variable data types in docs

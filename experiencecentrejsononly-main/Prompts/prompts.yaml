@@ -1,0 +1,72 @@
+prompts:
+  doc_extraction_prompt: |
+    Extract all information from the document. Process every page completely.
+
+    Extract:
+    - Metadata (invoice number, date, currency, etc.)
+    - Parties (seller, buyer, addresses)
+    - Line items (description, quantity, price, totals)
+    - Financial summary (subtotal, tax, total, payment terms)
+    - Additional notes, headers, footers
+
+    For tables: preserve row/column structure with labeled fields.
+
+    Output: Page-wise JSON. Each page as separate object with page_info field.
+
+    Format:
+    {
+      "page_1": {
+        "page_info": "page 1/N",
+        "metadata": {},
+        "parties": {},
+        "line_items": [],
+        "financial_summary": {},
+        "notes": ""
+      },
+      "page_N": {
+        "page_info": "page N/N",
+        "content": "..."
+      }
+    }
+
+    Requirements: Complete extraction, no data omission, preserve formatting, separate JSON per page.
+    Respond with JSON only. Do not include markdown fences or any extra text.
+
+  reimbursement_extraction_prompt: |
+    Classify expenses and determine reimbursement eligibility:
+
+    Categories: Travel, Food, Mobile, Stay, Others
+    Eligibility: Travel/Food = Allowed, Others = Not Allowed
+
+    Extract per document: expense type, date, amount (INR), vendor, eligibility
+
+    Output JSON:
+    {
+      "expenses": [
+        {
+          "document": 1,
+          "vendor": "",
+          "type": "",
+          "date": "",
+          "amount_inr": "",
+          "status": "Allowed" or "Not Allowed",
+          "reason": ""
+        }
+      ],
+      "allowed": {
+        "items": [],
+        "total_inr": ""
+      },
+      "not_allowed": {
+        "items": [],
+        "total_inr": ""
+      },
+      "summary": {
+        "total_documents": "",
+        "total_amount": "",
+        "reimbursable_amount": ""
+      }
+    }
+
+    Ensure accurate categorization and clear eligibility reasoning.
+    Respond with JSON only. Do not include markdown fences or any extra text.

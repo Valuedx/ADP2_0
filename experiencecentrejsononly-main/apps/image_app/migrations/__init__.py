@@ -1,0 +1,1 @@
+"""Migrations for the image_app application."""
