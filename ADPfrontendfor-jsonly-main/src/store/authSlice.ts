@@ -109,26 +109,26 @@ const authSlice = createSlice({
     updateUsageStats: (
       state,
       action: PayloadAction<{
-        documents_processed?: number;
-        max_documents_allowed?: number | null;
-        can_process_more?: boolean;
+        documentsProcessed?: number;
+        maxDocumentsAllowed?: number | null;
+        canProcessMore?: boolean;
         warnings?: string[];
       }>
     ) => {
       const {
-        documents_processed,
-        max_documents_allowed,
-        can_process_more,
+        documentsProcessed,
+        maxDocumentsAllowed,
+        canProcessMore,
         warnings,
       } = action.payload;
-      if (typeof documents_processed === 'number') {
-        state.documentsProcessed = documents_processed;
+      if (typeof documentsProcessed === 'number') {
+        state.documentsProcessed = documentsProcessed;
       }
-      if (max_documents_allowed !== undefined) {
-        state.maxDocumentsAllowed = max_documents_allowed;
+      if (maxDocumentsAllowed !== undefined) {
+        state.maxDocumentsAllowed = maxDocumentsAllowed;
       }
-      if (typeof can_process_more === 'boolean') {
-        state.canProcessMore = can_process_more;
+      if (typeof canProcessMore === 'boolean') {
+        state.canProcessMore = canProcessMore;
       }
       if (warnings) {
         state.usageWarnings = warnings;

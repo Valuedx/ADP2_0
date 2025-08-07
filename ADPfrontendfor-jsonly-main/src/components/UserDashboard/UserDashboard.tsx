@@ -14,8 +14,8 @@ const UserDashboard = () => {
   const [documents, setDocuments] = useState([]);
   const [filteredDocuments, setFilteredDocuments] = useState([]);
   const [count, setCount] = useState(0);
-  const [total_input_tokens, setTotal_input_tokens] = useState(0);
-  const [total_output_tokens, setTotal_output_tokens] = useState(0);
+  const [totalInputTokens, setTotalInputTokens] = useState(0);
+  const [totalOutputTokens, setTotalOutputTokens] = useState(0);
   const [searchDate, setSearchDate] = useState('');
   const [searchName, setSearchName] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
@@ -35,10 +35,10 @@ const UserDashboard = () => {
 
     apiService.listDocuments()
       .then((data) => {
-        const { count, documents, total_input_tokens, total_output_tokens } = data;
+        const { count, documents, totalInputTokens, totalOutputTokens } = data;
         setCount(count);
-        setTotal_input_tokens(total_input_tokens);
-        setTotal_output_tokens(total_output_tokens);
+        setTotalInputTokens(totalInputTokens);
+        setTotalOutputTokens(totalOutputTokens);
         const docsWithStringId = documents.map((doc) => ({ ...doc, id: String(doc.id) }));
         setDocuments(docsWithStringId);
         setFilteredDocuments(docsWithStringId);
@@ -140,13 +140,13 @@ const UserDashboard = () => {
         <Card>
           <CardContent className="p-4">
             <p className="text-sm text-muted-foreground">Total used input tokens</p>
-            <h2 className="text-2xl font-bold">{total_input_tokens}</h2>
+            <h2 className="text-2xl font-bold">{totalInputTokens}</h2>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-4">
             <p className="text-sm text-muted-foreground">Total used output tokens</p>
-            <h2 className="text-2xl font-bold">{total_output_tokens}</h2>
+            <h2 className="text-2xl font-bold">{totalOutputTokens}</h2>
           </CardContent>
         </Card>
         <Card>

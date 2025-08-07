@@ -32,19 +32,19 @@ const AdminDashboard = () => {
 
       {/* User Statistics Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-        <StatCard 
-          title="Total Users" 
-          value={userReport?.statistics?.total_users} 
-          breakdown={userReport?.statistics?.users_by_type}
+        <StatCard
+          title="Total Users"
+          value={userReport?.statistics?.totalUsers}
+          breakdown={userReport?.statistics?.usersByType}
         />
-        <StatCard 
-          title="Users at Limit" 
-          value={userReport?.statistics?.users_at_limit}
+        <StatCard
+          title="Users at Limit"
+          value={userReport?.statistics?.usersAtLimit}
           color="red"
         />
-        <StatCard 
-          title="Active This Month" 
-          value={userReport?.statistics?.active_users}
+        <StatCard
+          title="Active This Month"
+          value={userReport?.statistics?.activeUsers}
           color="green"
         />
       </div>

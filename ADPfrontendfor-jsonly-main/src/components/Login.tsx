@@ -65,7 +65,7 @@ const Login = () => {
     try {
       if (isSignIn) {
         const data = await apiService.login(username, password);
-        const { access, refresh, username: respUsername, user_type, id } = data;
+        const { access, refresh, username: respUsername, userType, id } = data;
         setPopupMessage(`Login successful! Welcome ${respUsername}`);
 
         dispatch(
@@ -74,7 +74,7 @@ const Login = () => {
             refreshToken: refresh,
             userId: id.toString(),
             username: respUsername,
-            userType: user_type,
+            userType,
           })
         );
         const usageStats = await apiService.getUsageStats();

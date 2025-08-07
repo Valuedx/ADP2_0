@@ -18,7 +18,7 @@ const FullDocumentProcessor = ({ documentId, onSuccess }: Props) => {
     setIsProcessing(true);
     try {
       const result = await apiService.processFullDocument(documentId);
-      setProgress(result.progress_messages);
+      setProgress(result.progressMessages);
       onSuccess(result);
       toast.success('Full document processed successfully!');
     } catch (error) {

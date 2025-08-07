@@ -3,6 +3,25 @@ import { store } from '@/store';
 
 const getAccessToken = () => store.getState().auth.accessToken;
 
+// Convert snake_case keys to camelCase recursively
+const toCamel = (str: string) =>
+  str.replace(/[_-](\w)/g, (_, c: string) => c.toUpperCase());
+
+const normalizeKeys = (data: unknown): unknown => {
+  if (Array.isArray(data)) {
+    return data.map(normalizeKeys);
+  }
+  if (data && typeof data === 'object') {
+    return Object.fromEntries(
+      Object.entries(data as Record<string, unknown>).map(([key, value]) => [
+        toCamel(key),
+        normalizeKeys(value),
+      ])
+    );
+  }
+  return data;
+};
+
 export const apiClient = async (
   endpoint: string,
   options: RequestInit = {},
@@ -50,6 +69,7 @@ export const apiClient = async (
     return null;
   }
 
-  return response.json();
+  const data = await response.json();
+  return normalizeKeys(data);
 };
 

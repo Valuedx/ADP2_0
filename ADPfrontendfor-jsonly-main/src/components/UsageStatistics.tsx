@@ -7,8 +7,8 @@ import UserTypeIndicator from './UserTypeIndicator';
 import { useUsageStats } from '@/hooks/useUsageStats';
 
 interface UsageStats {
-  documents_processed: number;
-  max_documents_allowed: number;
+  documentsProcessed: number;
+  maxDocumentsAllowed: number;
   warnings?: string[];
 }
 
@@ -27,7 +27,7 @@ const UsageStatistics = () => {
       </CardHeader>
       <CardContent>
         <div className="mb-2 text-sm">
-          {usageStats?.documents_processed}/{usageStats?.max_documents_allowed} documents processed
+          {usageStats?.documentsProcessed}/{usageStats?.maxDocumentsAllowed} documents processed
         </div>
         {usageStats?.warnings?.map((warning: string) => (
           <Alert key={warning} className="mt-2 border-yellow-200 bg-yellow-50">

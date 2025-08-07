@@ -20,7 +20,7 @@ const FileUploader = ({ onFileUpload }: FileUploaderProps) => {
   const [isDragging, setIsDragging] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [prompt, setPrompt] = useState('');
-  const [doc_type, setDocType] = useState('docextraction'); // ✅ State with correct name
+  const [docType, setDocType] = useState('docextraction');
   const fileInputRef = useRef<HTMLInputElement>(null);
   const navigate = useNavigate();
   const dispatch = useDispatch();
@@ -70,40 +70,40 @@ const FileUploader = ({ onFileUpload }: FileUploaderProps) => {
       const response = prompt.trim()
         ? await apiService.uploadDocument(
             file,
-            doc_type,
+            docType,
             processFullDocument,
             prompt
           )
         : await apiService.uploadDocument(
             file,
-            doc_type,
+            docType,
             processFullDocument
           );
       onFileUpload(file);
 
-      if (response && response.document_id) {
-        const documentId = String(response.document_id);
-        if (response.progress_messages) {
-          setProgressMessages(response.progress_messages);
+      if (response && response.documentId) {
+        const documentId = String(response.documentId);
+        if (response.progressMessages) {
+          setProgressMessages(response.progressMessages);
         }
         dispatch(
           setDocumentData({
             documentId,
             documentData: {
               ...response,
-              pages_processed: response.pages_processed,
-              is_full_document: response.is_full_document,
-              progress_messages: response.progress_messages,
+              pagesProcessed: response.pagesProcessed,
+              isFullDocument: response.isFullDocument,
+              progressMessages: response.progressMessages,
             },
           })
         );
 
-        if (response.usage_info) {
-          dispatch(updateUsageStats(response.usage_info));
+        if (response.usageInfo) {
+          dispatch(updateUsageStats(response.usageInfo));
         }
 
         toast.success(
-          `Document processed successfully! ${response.pages_processed} pages processed.`
+          `Document processed successfully! ${response.pagesProcessed} pages processed.`
         );
         navigate(`/document/${documentId}`);
       } else {
@@ -177,7 +177,7 @@ const FileUploader = ({ onFileUpload }: FileUploaderProps) => {
             <input
               type="radio"
               value="docextraction"
-              checked={doc_type === 'docextraction'}
+              checked={docType === 'docextraction'}
               onChange={handleDocTypeChange}
             />
             Document Extraction
@@ -186,7 +186,7 @@ const FileUploader = ({ onFileUpload }: FileUploaderProps) => {
             <input
               type="radio"
               value="Bill Reimbursment"
-              checked={doc_type === 'Bill Reimbursment'}
+              checked={docType === 'Bill Reimbursment'}
               onChange={handleDocTypeChange}
             />
             Bill Reimbursment

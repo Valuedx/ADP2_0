@@ -3,15 +3,15 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
 const AdminAnalytics = ({ userReport }) => {
   const userTypeData = [
-    { name: 'Default Users', value: userReport?.statistics?.users_by_type?.default || 0 },
-    { name: 'Power Users', value: userReport?.statistics?.users_by_type?.power || 0 },
-    { name: 'Admin Users', value: userReport?.statistics?.users_by_type?.admin || 0 }
+    { name: 'Default Users', value: userReport?.statistics?.usersByType?.default || 0 },
+    { name: 'Power Users', value: userReport?.statistics?.usersByType?.power || 0 },
+    { name: 'Admin Users', value: userReport?.statistics?.usersByType?.admin || 0 }
   ];
 
   const usageData = [
-    { name: 'Active Users', value: userReport?.statistics?.active_users || 0 },
-    { name: 'At Limit', value: userReport?.statistics?.users_at_limit || 0 },
-    { name: 'Near Limit', value: userReport?.statistics?.users_near_limit || 0 }
+    { name: 'Active Users', value: userReport?.statistics?.activeUsers || 0 },
+    { name: 'At Limit', value: userReport?.statistics?.usersAtLimit || 0 },
+    { name: 'Near Limit', value: userReport?.statistics?.usersNearLimit || 0 }
   ];
 
   return (

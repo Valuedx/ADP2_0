@@ -23,10 +23,10 @@ import { useErrorHandler } from '@/hooks/useErrorHandler';
 interface User {
   id: string;
   username: string;
-  user_type: string;
-  documents_processed: number;
-  max_documents_allowed: number;
-  last_login: string;
+  userType: string;
+  documentsProcessed: number;
+  maxDocumentsAllowed: number;
+  lastLogin: string;
 }
 
 interface Props {
@@ -77,16 +77,16 @@ const UserManagementTable = ({ users, onUserUpdate }: Props) => {
               <TableRow key={user.id}>
                 <TableCell>{user.username}</TableCell>
                 <TableCell>
-                  <UserTypeIndicator userType={user.user_type} />
+                  <UserTypeIndicator userType={user.userType} />
                 </TableCell>
                 <TableCell>
                   <UsageBadge
-                    current={user.documents_processed}
-                    max={user.max_documents_allowed}
-                    userType={user.user_type}
+                    current={user.documentsProcessed}
+                    max={user.maxDocumentsAllowed}
+                    userType={user.userType}
                   />
                 </TableCell>
-                <TableCell>{user.last_login}</TableCell>
+                <TableCell>{user.lastLogin}</TableCell>
                 <TableCell>
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
