@@ -1,11 +1,20 @@
 import { apiClient } from '@/services/apiClient';
 
+export interface LoginResponse {
+  access: string;
+  refresh: string;
+  username: string;
+  userType: 'default' | 'power' | 'admin';
+  id: number;
+  message?: string;
+}
+
 export const apiService = {
-  login: async (username: string, password: string) => {
+  login: async (username: string, password: string): Promise<LoginResponse> => {
     return apiClient('/login/', {
       method: 'POST',
       body: JSON.stringify({ username, password }),
-    });
+    }) as Promise<LoginResponse>;
   },
 
   createUser: async (
