@@ -33,13 +33,17 @@ const UserDashboard = () => {
   useEffect(() => {
     if (!accessToken) return;
 
-    apiService.listDocuments()
+    apiService
+      .listDocuments()
       .then((data) => {
-        const { count, documents, total_input_tokens, total_output_tokens } = data;
+        const { count, documents, totalInputTokens, totalOutputTokens } = data;
         setCount(count);
-        setTotal_input_tokens(total_input_tokens);
-        setTotal_output_tokens(total_output_tokens);
-        const docsWithStringId = documents.map((doc) => ({ ...doc, id: String(doc.id) }));
+        setTotal_input_tokens(totalInputTokens);
+        setTotal_output_tokens(totalOutputTokens);
+        const docsWithStringId = documents.map((doc) => ({
+          ...doc,
+          id: String(doc.id),
+        }));
         setDocuments(docsWithStringId);
         setFilteredDocuments(docsWithStringId);
       })

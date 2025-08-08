@@ -9,6 +9,13 @@ export interface LoginResponse {
   message?: string;
 }
 
+export interface DocumentListResponse {
+  count: number;
+  documents: Record<string, unknown>[];
+  totalInputTokens: number;
+  totalOutputTokens: number;
+}
+
 export const apiService = {
   login: async (username: string, password: string): Promise<LoginResponse> => {
     return apiClient('/login/', {
@@ -49,8 +56,8 @@ export const apiService = {
     );
   },
 
-  listDocuments: async () => {
-    return apiClient('/documents/');
+  listDocuments: async (): Promise<DocumentListResponse> => {
+    return apiClient('/documents/') as Promise<DocumentListResponse>;
   },
 
   filterDocuments: async (userId: string, date: string) => {
