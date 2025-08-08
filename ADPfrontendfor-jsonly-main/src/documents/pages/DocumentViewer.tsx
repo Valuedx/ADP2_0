@@ -68,13 +68,14 @@ const DocumentViewer: React.FC = () => {
   const [leftPanelWidth, setLeftPanelWidth] = useState(50); // percent
   const isDragging = useRef(false);
   const navigate = useNavigate();
-  const { id } = useParams<{ id: string }>();
-  const reduxDocumentId = useSelector(
-    (state: RootState) => state.document.documentId
-  );
+  const { id } = useParams();
   const userType = useSelector((state: RootState) => state.auth.userType);
   const [processingFull, setProcessingFull] = useState(false);
   const { handleError } = useErrorHandler();
+
+  useEffect(() => {
+    setDocumentId(id ?? null);
+  }, [id]);
 
   const fetchDocumentData = useCallback(async (id: string): Promise<void> => {
     try {
@@ -101,32 +102,6 @@ const DocumentViewer: React.FC = () => {
       setProcessingFull(false);
     }
   };
-
-  useEffect(() => {
-    if (reduxDocumentId) {
-      setDocumentId(reduxDocumentId);
-      return;
-    }
-
-    if (id) {
-      setDocumentId(decodeURIComponent(id));
-      return;
-    }
-
-    const localStorageKeys = Object.keys(localStorage);
-    const documentKey = localStorageKeys.find(key => key.startsWith('document_'));
-
-    if (documentKey) {
-      try {
-        const storedData = JSON.parse(localStorage.getItem(documentKey));
-        if (storedData?.document_id) {
-          setDocumentId(String(storedData.document_id));
-        }
-      } catch (e) {
-        handleError(e as { status?: number; message?: string }, 'Error parsing localStorage data');
-      }
-    }
-  }, [reduxDocumentId, id, handleError]);
 
   useEffect(() => {
     if (!documentId) {
