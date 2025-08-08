@@ -229,22 +229,14 @@ const DocumentViewer: React.FC = () => {
               Back
             </button>
             <div className="flex items-center space-x-4">
-              {documentData?.inputToken && (
-                <span className="text-sm text-gray-600">
-                  Input Tokens: <strong>{documentData.inputToken}</strong>
-                </span>
-              )}
-              {documentData?.outputToken && (
-                <span className="text-sm text-gray-600">
-                  Output Tokens: <strong>{documentData.outputToken}</strong>
-                </span>
-              )}
               {documentData?.status && (
-                <span className={`px-3 py-1 rounded-full text-xs font-medium ${
-                  documentData.status === 'success'
-                    ? 'bg-green-100 text-green-800'
-                    : 'bg-red-100 text-red-800'
-                }`}>
+                <span
+                  className={`px-3 py-1 rounded-full text-xs font-medium ${
+                    documentData.status === 'success'
+                      ? 'bg-green-100 text-green-800'
+                      : 'bg-red-100 text-red-800'
+                  }`}
+                >
                   {documentData.status}
                 </span>
               )}
