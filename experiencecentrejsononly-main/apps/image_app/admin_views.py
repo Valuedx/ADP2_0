@@ -106,22 +106,22 @@ class AdminUserReportView(APIView):
             # Recent registrations (last 30 days)
             recent_registrations = len([u for u in user_reports if u['days_registered'] <= 30])
             
-            summary = {
+            statistics = {
                 "total_users": total_users,
                 "active_users": active_users,
                 "inactive_users": total_users - active_users,
                 "users_at_limit": users_at_limit,
-                "users_approaching_limit": users_approaching_limit,
+                "users_near_limit": users_approaching_limit,
                 "recent_registrations_30d": recent_registrations,
-                "user_type_breakdown": user_type_stats,
+                "users_by_type": user_type_stats,
                 "total_documents_processed": sum(u['total_documents_in_db'] for u in user_reports),
                 "total_pages_processed": sum(u['total_pages_processed'] for u in user_reports),
                 "total_tokens_consumed": sum(u['total_tokens'] for u in user_reports)
             }
-            
+
             return Response({
                 "status": "success",
-                "summary": summary,
+                "statistics": statistics,
                 "users": user_reports,
                 "generated_at": timezone.now().strftime("%Y-%m-%d %H:%M:%S")
             }, status=status.HTTP_200_OK)

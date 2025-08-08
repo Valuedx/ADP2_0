@@ -19,7 +19,7 @@ Hello,
 I would like to upgrade my account to Power User for unlimited document processing.
 
 Current Usage:
-- Documents Processed: ${userStats.documents_processed}/${userStats.max_documents_allowed}
+- Documents Processed: ${userStats.documentsProcessed}/${userStats.maxDocumentsAllowed}
 - Account Type: ${userStats.userType}
 
 Please let me know the next steps.
@@ -36,7 +36,7 @@ Thank you!
       <AlertCircle className="h-4 w-4" />
       <AlertTitle>Document Limit Reached</AlertTitle>
       <AlertDescription>
-        You've reached your limit of {userStats.max_documents_allowed} documents.
+        You've reached your limit of {userStats.maxDocumentsAllowed} documents.
         <div className="mt-3 flex gap-2">
           <Button
             size="sm"

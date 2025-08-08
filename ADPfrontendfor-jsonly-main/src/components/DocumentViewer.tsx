@@ -14,12 +14,12 @@ import config from '@/config';
 interface DocumentData {
   filepath: string;
   filename?: string;
-  original_filename?: string;
-  json_data?: Record<string, unknown> | null;
-  pages_processed?: number;
-  is_full_document?: boolean;
-  input_token?: number;
-  output_token?: number;
+  originalFilename?: string;
+  jsonData?: Record<string, unknown> | null;
+  pagesProcessed?: number;
+  isFullDocument?: boolean;
+  inputToken?: number;
+  outputToken?: number;
   status?: string;
 }
 
@@ -34,12 +34,12 @@ const DocumentProcessingInfo: React.FC<DocumentProcessingInfoProps> = ({ documen
       <div className="grid grid-cols-2 gap-4 text-sm">
         <div>
           <span className="text-gray-600">Pages Processed:</span>
-          <span className="ml-2 font-medium">{documentData.pages_processed || 'Unknown'}</span>
+          <span className="ml-2 font-medium">{documentData.pagesProcessed || 'Unknown'}</span>
         </div>
         <div>
           <span className="text-gray-600">Processing Type:</span>
           <span className="ml-2">
-            {documentData.is_full_document ? (
+            {documentData.isFullDocument ? (
               <span className="text-green-600 font-medium">Full Document</span>
             ) : (
               <span className="text-orange-600 font-medium">Partial (3 pages)</span>
@@ -48,11 +48,11 @@ const DocumentProcessingInfo: React.FC<DocumentProcessingInfoProps> = ({ documen
         </div>
         <div>
           <span className="text-gray-600">Input Tokens:</span>
-          <span className="ml-2 font-medium">{documentData.input_token || 'N/A'}</span>
+          <span className="ml-2 font-medium">{documentData.inputToken || 'N/A'}</span>
         </div>
         <div>
           <span className="text-gray-600">Output Tokens:</span>
-          <span className="ml-2 font-medium">{documentData.output_token || 'N/A'}</span>
+          <span className="ml-2 font-medium">{documentData.outputToken || 'N/A'}</span>
         </div>
       </div>
     </div>
@@ -191,13 +191,13 @@ const DocumentViewer: React.FC = () => {
   const getDisplayFilename = () => {
     return (
       documentData?.filename ||
-      documentData?.original_filename ||
+      documentData?.originalFilename ||
       documentData?.filepath?.split('/').pop()
     );
   };
 
   const handleDownloadJSON = () => {
-  const json = documentData?.json_data;
+  const json = documentData?.jsonData;
   if (!json) return;
 
   const blob = new Blob([JSON.stringify(json, null, 2)], { type: 'application/json' });
@@ -260,14 +260,14 @@ const DocumentViewer: React.FC = () => {
               Back
             </button>
             <div className="flex items-center space-x-4">
-              {documentData?.input_token && (
+              {documentData?.inputToken && (
                 <span className="text-sm text-gray-600">
-                  Input Tokens: <strong>{documentData.input_token}</strong>
+                  Input Tokens: <strong>{documentData.inputToken}</strong>
                 </span>
               )}
-              {documentData?.output_token && (
+              {documentData?.outputToken && (
                 <span className="text-sm text-gray-600">
-                  Output Tokens: <strong>{documentData.output_token}</strong>
+                  Output Tokens: <strong>{documentData.outputToken}</strong>
                 </span>
               )}
               {documentData?.status && (
@@ -317,7 +317,7 @@ const DocumentViewer: React.FC = () => {
     <h2 className="text-lg font-semibold text-gray-800 m-0 leading-tight">Extracted Data</h2>
   </div>
               <div className="flex items-center gap-2 relative">
-                {documentData && !documentData.is_full_document && (userType === 'power' || userType === 'admin') && (
+                {documentData && !documentData.isFullDocument && (userType === 'power' || userType === 'admin') && (
                   <button
                     onClick={handleProcessFullDocument}
                     className="px-3 py-1 text-sm bg-orange-600 text-white rounded hover:bg-orange-700"
@@ -350,9 +350,9 @@ const DocumentViewer: React.FC = () => {
             </div>
 
             <div className="flex-1 overflow-auto max-h-[500px] min-h-[300px] rounded border p-3 bg-gray-50">
-              {documentData?.json_data ? (
+              {documentData?.jsonData ? (
                 <pre className="text-sm text-gray-800 whitespace-pre-wrap break-words">
-                  {JSON.stringify(documentData.json_data, null, 2)}
+                  {JSON.stringify(documentData.jsonData, null, 2)}
                 </pre>
               ) : (
                 <div className="text-gray-500 text-center">
@@ -360,7 +360,7 @@ const DocumentViewer: React.FC = () => {
                   <p>No JSON data available</p>
                 </div>
               )}
-
+            
             </div>
           </div>
         </div>

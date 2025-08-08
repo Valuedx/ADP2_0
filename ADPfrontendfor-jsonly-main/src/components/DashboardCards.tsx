@@ -19,7 +19,7 @@ interface DashboardStat {
 }
 
 interface DocumentInfo {
-  entry_date: string;
+  entryDate: string;
 }
 
 const DashboardCards = () => {
@@ -40,7 +40,7 @@ const DashboardCards = () => {
         if (data.documents) {
           const totalDocuments = data.documents.length;
           const today = new Date().toISOString().split('T')[0];
-          const uploadedToday = data.documents.filter((doc: DocumentInfo) => doc.entry_date === today).length;
+          const uploadedToday = data.documents.filter((doc: DocumentInfo) => doc.entryDate === today).length;
 
           const downloaded = 0;
           const pending = 0;
@@ -75,9 +75,9 @@ const DashboardCards = () => {
           if (usageStats && userType === 'default') {
             newStats.push({
               title: 'Document Usage',
-              value: `${usageStats.documents_processed}/${usageStats.max_documents_allowed}`,
+              value: `${usageStats.documentsProcessed}/${usageStats.maxDocumentsAllowed}`,
               icon: <AlertCircle className="h-5 w-5 text-amber-500" />,
-              description: `${usageStats.max_documents_allowed - usageStats.documents_processed} remaining`,
+              description: `${usageStats.maxDocumentsAllowed - usageStats.documentsProcessed} remaining`,
             });
           }
 
@@ -116,7 +116,7 @@ const DashboardCards = () => {
       ))}
 
       {userType === 'default' &&
-        usageStats?.documents_processed >= usageStats?.max_documents_allowed && (
+        usageStats?.documentsProcessed >= usageStats?.maxDocumentsAllowed && (
           <ContactUpgradeAlert userStats={usageStats} />
         )}
     </div>

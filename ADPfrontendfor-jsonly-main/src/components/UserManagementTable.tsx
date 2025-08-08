@@ -24,9 +24,9 @@ interface User {
   id: string;
   username: string;
   userType: string;
-  documents_processed: number;
-  max_documents_allowed: number;
-  last_login: string;
+  documentsProcessed: number;
+  maxDocumentsAllowed: number;
+  lastDocumentProcessed: string;
 }
 
 interface Props {
@@ -81,12 +81,12 @@ const UserManagementTable = ({ users, onUserUpdate }: Props) => {
                 </TableCell>
                 <TableCell>
                   <UsageBadge
-                    current={user.documents_processed}
-                    max={user.max_documents_allowed}
+                    current={user.documentsProcessed}
+                    max={user.maxDocumentsAllowed}
                     userType={user.userType}
                   />
                 </TableCell>
-                <TableCell>{user.last_login}</TableCell>
+                <TableCell>{user.lastDocumentProcessed}</TableCell>
                 <TableCell>
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>

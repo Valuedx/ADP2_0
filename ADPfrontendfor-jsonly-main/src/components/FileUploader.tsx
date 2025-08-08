@@ -14,39 +14,33 @@ import ProcessingProgress from './ProcessingProgress';
 
 // Normalize different backend response shapes
 type UploadResponse = {
-  document_id?: string;
   documentId?: string;
-  pages_processed?: number;
   pagesProcessed?: number;
-  is_full_document?: boolean;
   isFullDocument?: boolean;
-  progress_messages?: string[];
   progressMessages?: string[];
-  usage_info?: unknown;
   usageInfo?: unknown;
-  can_load_full_document?: boolean;
   canLoadFullDocument?: boolean;
   [key: string]: unknown;
 };
 
 const normalizeUploadResponse = (response: unknown): UploadResponse => {
   const data =
-    (response as { data?: UploadResponse })?.data ||
-    (response as UploadResponse) ||
+    (response as { data?: Record<string, unknown> })?.data ||
+    (response as Record<string, unknown>) ||
     {};
   return {
     ...data,
-    document_id: (data.document_id ?? data.documentId) as string | undefined,
-    pages_processed: (data.pages_processed ?? data.pagesProcessed) as
+    documentId: (data.document_id ?? data.documentId) as string | undefined,
+    pagesProcessed: (data.pages_processed ?? data.pagesProcessed) as
       | number
       | undefined,
-    is_full_document: (data.is_full_document ?? data.isFullDocument) as
+    isFullDocument: (data.is_full_document ?? data.isFullDocument) as
       | boolean
       | undefined,
-    progress_messages: (data.progress_messages ?? data.progressMessages ?? []) as
+    progressMessages: (data.progress_messages ?? data.progressMessages ?? []) as
       string[],
-    usage_info: data.usage_info ?? data.usageInfo,
-    can_load_full_document: (data.can_load_full_document ??
+    usageInfo: data.usage_info ?? data.usageInfo,
+    canLoadFullDocument: (data.can_load_full_document ??
       data.canLoadFullDocument) as boolean | undefined,
   };
 };
@@ -122,29 +116,29 @@ const FileUploader = ({ onFileUpload }: FileUploaderProps) => {
 
       const response = normalizeUploadResponse(rawResponse);
 
-      if (response && response.document_id) {
-        const documentId = String(response.document_id);
-        if (response.progress_messages) {
-          setProgressMessages(response.progress_messages);
+      if (response && response.documentId) {
+        const documentId = String(response.documentId);
+        if (response.progressMessages) {
+          setProgressMessages(response.progressMessages);
         }
         dispatch(
           setDocumentData({
             documentId,
             documentData: {
               ...response,
-              pages_processed: response.pages_processed,
-              is_full_document: response.is_full_document,
-              progress_messages: response.progress_messages,
+              pagesProcessed: response.pagesProcessed,
+              isFullDocument: response.isFullDocument,
+              progressMessages: response.progressMessages,
             },
           })
         );
 
-        if (response.usage_info) {
-          dispatch(updateUsageStats(response.usage_info));
+        if (response.usageInfo) {
+          dispatch(updateUsageStats(response.usageInfo));
         }
 
         toast.success(
-          `Document processed successfully! ${response.pages_processed} pages processed.`
+          `Document processed successfully! ${response.pagesProcessed} pages processed.`
         );
         navigate(`/document/${documentId}`);
       } else {

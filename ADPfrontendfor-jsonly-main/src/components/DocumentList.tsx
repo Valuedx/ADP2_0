@@ -11,9 +11,9 @@ import { handleError } from '@/lib/utils';
 interface Doc {
   id: string;
   filename: string;
-  entry_date: string;
-  pages_processed: number;
-  is_full_document: boolean;
+  entryDate: string;
+  pagesProcessed: number;
+  isFullDocument: boolean;
 }
 
 interface Props {
@@ -51,15 +51,15 @@ const DocumentList = ({ documents }: Props) => {
             <div>
               <h3 className="font-medium">{doc.filename}</h3>
               <div className="flex gap-4 text-sm text-gray-600 mt-1">
-                <span>📅 {doc.entry_date}</span>
-                <span>📄 {doc.pages_processed || 'Unknown'} pages processed</span>
-                {!doc.is_full_document && (
+                <span>📅 {doc.entryDate}</span>
+                <span>📄 {doc.pagesProcessed || 'Unknown'} pages processed</span>
+                {!doc.isFullDocument && (
                   <span className="text-orange-600">⚠️ Partial document</span>
                 )}
               </div>
             </div>
             <div className="flex gap-2">
-              {!doc.is_full_document && (userType === 'power' || userType === 'admin') && (
+              {!doc.isFullDocument && (userType === 'power' || userType === 'admin') && (
                 <Button
                   size="sm"
                   variant="outline"
