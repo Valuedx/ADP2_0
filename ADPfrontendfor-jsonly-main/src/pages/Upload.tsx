@@ -10,9 +10,9 @@ import {
   BadgePercent,
   FileType
 } from "lucide-react";
-import Navbar from "@/components/Navbar";
-import FileUploader from "@/components/FileUploader";
-import { examples, type Example } from "../components/Examples";
+import Navbar from "@/shared/components/Navbar";
+import FileUploader from "@/documents/components/FileUploader";
+import { examples, type Example } from "@/documents/components/Examples";
 
 const Upload = () => {
   const [file, setFile] = useState<File | null>(null);

@@ -1,7 +1,7 @@
 
-import Navbar from "@/components/Navbar";
-import DashboardCards from "@/components/DashboardCards";
-import { Button } from "@/components/ui/button";
+import Navbar from "@/shared/components/Navbar";
+import DashboardCards from "@/dashboard/components/DashboardCards";
+import { Button } from "@/shared/components/ui/button";
 import { Upload, User } from "lucide-react";
 import { Link } from "react-router-dom";
 import './Index.css';
