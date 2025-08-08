@@ -72,3 +72,8 @@ class DocumentAccessTests(APITestCase):
         response = self.client.post(url, data, format="json")
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn("Invalid user ID", response.data.get("error", ""))
+
+    def test_unauthorized_user_cannot_access_file_path(self):
+        self.client.force_authenticate(user=self.default_user)
+        response = self.client.get(self.document.file.url)
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)

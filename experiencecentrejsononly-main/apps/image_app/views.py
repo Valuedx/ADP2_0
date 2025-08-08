@@ -3,7 +3,13 @@ import json
 from dotenv import load_dotenv
 from django.conf import settings
 from django.core.files.storage import default_storage
-from django.http import JsonResponse, HttpResponseBadRequest, StreamingHttpResponse
+from django.http import (
+    JsonResponse,
+    HttpResponseBadRequest,
+    StreamingHttpResponse,
+    FileResponse,
+    Http404,
+)
 from django.views.decorators.csrf import csrf_exempt
 
 from .models import Document
@@ -182,6 +188,24 @@ class GetDocumentByIdView(APIView):
                 {"error": "An internal server error occurred while retrieving the document."},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
+
+
+class ProtectedDocumentView(APIView):
+    """Serve documents only to authorized users."""
+
+    def get(self, request, file_path):
+        try:
+            doc = get_object_or_404(Document, file=file_path)
+            user = request.user
+            is_admin = getattr(user, "user_type", "") == "admin"
+            if not user.is_authenticated or (not is_admin and doc.userid_id != user.id):
+                raise Http404()
+            return FileResponse(doc.file.open("rb"))
+        except Http404:
+            raise
+        except Exception:
+            logger.error("Error serving protected document", exc_info=True)
+            raise Http404()
 
 class UserDocumentView(APIView):
     permission_classes = [IsAuthenticated]
