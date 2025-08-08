@@ -48,9 +48,9 @@ def load_prompts():
         with open(CONFIG_FILE_PATH, 'r', encoding='utf-8') as f:
             APP_CONFIG = yaml.safe_load(f)
         logger.info(f"Successfully loaded prompts from {CONFIG_FILE_PATH}")
-        logger.error(f"APP_CONFIG keys: {list(APP_CONFIG.keys())}")
+        logger.debug(f"APP_CONFIG keys: {list(APP_CONFIG.keys())}")
         if 'prompts' in APP_CONFIG and isinstance(APP_CONFIG['prompts'], dict):
-            logger.error(f"prompts keys: {list(APP_CONFIG['prompts'].keys())}")
+            logger.debug(f"prompts keys: {list(APP_CONFIG['prompts'].keys())}")
     except FileNotFoundError:
         logger.critical(f"Prompts file not found at {CONFIG_FILE_PATH}. Please ensure it exists.")
         raise 
