@@ -4,6 +4,7 @@ import UserManagementTable from '@/admin/components/UserManagementTable';
 import AdminAnalytics from '@/admin/components/AdminAnalytics';
 import { handleError } from '@/shared/utils';
 import { apiService } from '@/services/apiService';
+import Navbar from '@/shared/components/Navbar';
 
 const AdminDashboard = () => {
   const [userReport, setUserReport] = useState<Record<string, unknown> | null>(
@@ -27,8 +28,10 @@ const AdminDashboard = () => {
   };
 
   return (
-    <div className="container mx-auto p-6">
-      <h1 className="text-2xl font-bold mb-6">Admin Dashboard</h1>
+    <>
+      <Navbar />
+      <div className="container mx-auto p-6">
+        <h1 className="text-2xl font-bold mb-6">Admin Dashboard</h1>
 
       {/* User Statistics Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
@@ -56,7 +59,8 @@ const AdminDashboard = () => {
         users={userReport?.users}
         onUserUpdate={fetchUserReport}
       />
-    </div>
+      </div>
+    </>
   );
 };
 
