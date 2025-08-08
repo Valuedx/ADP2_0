@@ -158,6 +158,7 @@ The API will be available at `http://127.0.0.1:8000/` by default.
 ### Authentication
 - `POST /IDA/create_user/` – Register a new user (defaults to 'default' user type)
 - `POST /IDA/login/` – Obtain JWT tokens
+- `POST /IDA/token/refresh/` – Refresh access token using a refresh token
 - `GET /profile/` – Fetch details of the authenticated user
 - `POST /IDA/password-reset/` – Send a password reset email
 - `POST /IDA/password-reset-confirm/` – Reset password using provided token
