@@ -12,6 +12,7 @@ import { useErrorHandler } from '@/shared/hooks/useErrorHandler';
 import config from '@/config';
 
 interface DocumentData {
+  // URL path to the stored document
   filePath: string;
   filename?: string;
   originalFilename?: string;
@@ -117,7 +118,8 @@ const DocumentViewer: React.FC = () => {
   const isPDF = (filePath: string) => getFileExtension(filePath) === 'pdf';
 
   const renderDocument = () => {
-    if (!documentData?.filePath) {
+    const filePath = documentData?.filePath;
+    if (!filePath) {
       return (
         <div className="flex items-center justify-center h-full bg-gray-50 rounded-lg">
           <div className="text-center">
@@ -128,7 +130,6 @@ const DocumentViewer: React.FC = () => {
       );
     }
 
-    const filePath = documentData.filePath;
     const fullUrl = filePath.startsWith('http') ? filePath : `${config.IMG_BASE_URL}${filePath}`;
 
     if (isImage(filePath)) {

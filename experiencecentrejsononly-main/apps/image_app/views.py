@@ -157,7 +157,7 @@ class GetDocumentByIdView(APIView):
 
                 response_data = {
                     "status": "success",
-                    "filepath": file_url,
+                    "filePath": file_url,
                     "json_data": doc.json_data,
                     "input_token": doc.input_token,
                     "output_token": doc.output_token,
@@ -493,7 +493,7 @@ class UploadAndProcessFileView(APIView):
 
                 db_start = time.time()
                 doc = Document.objects.create(
-                    filepath=relative_path,
+                    file_path=relative_path,
                     file=relative_path,
                     json_data=parsed_json,
                     userid=user,
@@ -584,7 +584,7 @@ class ProcessFullDocumentView(APIView):
                 )
             
             # Get the original file path
-            absolute_path = os.path.join(settings.MEDIA_ROOT, doc.filepath)
+            absolute_path = os.path.join(settings.MEDIA_ROOT, doc.file_path)
             
             if not os.path.exists(absolute_path):
                 return Response(

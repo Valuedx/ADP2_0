@@ -27,7 +27,7 @@ class DocumentAccessTests(APITestCase):
         upload = SimpleUploadedFile("test.pdf", b"filecontent", content_type="application/pdf")
         self.document = Document.objects.create(
             userid=self.owner,
-            filepath="uploads/test.pdf",
+            file_path="uploads/test.pdf",
             file=upload,
             json_data={},
             entry_date=timezone.now().date(),
