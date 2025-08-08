@@ -3,16 +3,19 @@ import { store } from '@/store';
 
 const getAccessToken = () => store.getState().auth.accessToken;
 
-// Recursively replace `user_type` keys with `userType`
-const normalizeUserType = (data: unknown): unknown => {
+// Convert snake_case keys to camelCase recursively
+const toCamel = (str: string) =>
+  str.replace(/[_-](\w)/g, (_, c) => (c ? c.toUpperCase() : ''));
+
+const camelizeKeys = (data: unknown): unknown => {
   if (Array.isArray(data)) {
-    return data.map(normalizeUserType);
+    return data.map(camelizeKeys);
   }
   if (data && typeof data === 'object') {
     return Object.fromEntries(
       Object.entries(data as Record<string, unknown>).map(([key, value]) => [
-        key === 'user_type' ? 'userType' : key,
-        normalizeUserType(value),
+        toCamel(key),
+        camelizeKeys(value),
       ])
     );
   }
@@ -67,6 +70,6 @@ export const apiClient = async (
   }
 
   const data = await response.json();
-  return normalizeUserType(data);
+  return camelizeKeys(data);
 };
 
