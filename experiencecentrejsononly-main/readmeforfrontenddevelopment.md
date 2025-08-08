@@ -359,7 +359,7 @@ const getDocument = async (documentId) => {
 ```json
 {
   "status": "success",
-  "filepath": "http://127.0.0.1:8000/media/uploads/pdf_files/invoice_001.pdf",
+  "filePath": "http://127.0.0.1:8000/media/uploads/pdf_files/invoice_001.pdf",
   "json_data": {
     "page_1": {
       "metadata": {...},

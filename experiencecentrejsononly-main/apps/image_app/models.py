@@ -9,7 +9,7 @@ class Document(models.Model):
         on_delete=models.CASCADE,
         related_name='documents'
     )
-    filepath = models.CharField(max_length=255, blank=True)
+    file_path = models.CharField(max_length=255, blank=True)
     file = models.FileField(upload_to='uploads/')
     json_data = models.JSONField(blank=True, null=True)
     entry_date = models.DateField(default=timezone.now)
