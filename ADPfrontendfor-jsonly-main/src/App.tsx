@@ -1,21 +1,21 @@
 
-import { Toaster } from "@/components/ui/toaster";
-import { Toaster as Sonner } from "@/components/ui/sonner";
-import { TooltipProvider } from "@/components/ui/tooltip";
+import { Toaster } from "@/shared/components/ui/toaster";
+import { Toaster as Sonner } from "@/shared/components/ui/sonner";
+import { TooltipProvider } from "@/shared/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Index from "./pages/Index";
 import Upload from "./pages/Upload";
 import NotFound from "./pages/NotFound";
-import Login from "./components/Login";
-import PasswordResetRequest from "./components/PasswordResetRequest";
-import PasswordResetConfirm from "./components/PasswordResetConfirm";
-import DocumentViewer from "./components/DocumentViewer";
-import UserDashboard from "./components/UserDashboard/UserDashboard";
-import AdminDashboard from "./pages/AdminDashboard";
-import ProtectedRoute from "./components/ProtectedRoute";
+import Login from "@/auth/components/Login";
+import PasswordResetRequest from "@/auth/components/PasswordResetRequest";
+import PasswordResetConfirm from "@/auth/components/PasswordResetConfirm";
+import DocumentViewer from "@/documents/pages/DocumentViewer";
+import UserDashboard from "@/dashboard/pages/UserDashboard";
+import AdminDashboard from "@/admin/pages/AdminDashboard";
+import ProtectedRoute from "@/shared/components/ProtectedRoute";
 import { useEffect } from "react";
-import useBranding from "@/hooks/useBranding";
+import useBranding from "@/shared/hooks/useBranding";
 
 const queryClient = new QueryClient();
 
