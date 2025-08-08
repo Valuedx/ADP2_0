@@ -14,18 +14,15 @@ Including another URLconf
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
 from django.contrib import admin
-
 from django.urls import path, include
-
-from django.conf.urls.static import static
 from django.conf import settings
+
+from apps.image_app.views import ProtectedDocumentView
 
 urlpatterns = [
     path("admin/", admin.site.urls),
     path("IDA/",include("apps.image_app.urls")),
     path('', include('apps.authentication.urls')),
+    path(f"{settings.MEDIA_URL.lstrip('/')}<path:file_path>",
+         ProtectedDocumentView.as_view(), name="protected-media"),
 ]
-
-
-if settings.DEBUG:
-    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
