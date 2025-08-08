@@ -12,7 +12,7 @@ import { useErrorHandler } from '@/shared/hooks/useErrorHandler';
 import config from '@/config';
 
 interface DocumentData {
-  filepath: string;
+  filePath: string;
   filename?: string;
   originalFilename?: string;
   jsonData?: Record<string, unknown> | null;
@@ -113,16 +113,16 @@ const DocumentViewer: React.FC = () => {
     fetchDocumentData(documentId);
   }, [documentId, handleError, fetchDocumentData]);
 
-  const getFileExtension = (filepath) => {
-    if (!filepath) return '';
-    return filepath.split('.').pop().toLowerCase();
+  const getFileExtension = (filePath: string) => {
+    if (!filePath) return '';
+    return filePath.split('.').pop().toLowerCase();
   };
 
-  const isImage = (filepath) => ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp', 'svg'].includes(getFileExtension(filepath));
-  const isPDF = (filepath) => getFileExtension(filepath) === 'pdf';
+  const isImage = (filePath: string) => ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp', 'svg'].includes(getFileExtension(filePath));
+  const isPDF = (filePath: string) => getFileExtension(filePath) === 'pdf';
 
   const renderDocument = () => {
-    if (!documentData?.filepath) {
+    if (!documentData?.filePath) {
       return (
         <div className="flex items-center justify-center h-full bg-gray-50 rounded-lg">
           <div className="text-center">
@@ -133,16 +133,16 @@ const DocumentViewer: React.FC = () => {
       );
     }
 
-    const filepath = documentData.filepath;
-    const fullUrl = filepath.startsWith('http') ? filepath : `${config.IMG_BASE_URL}${filepath}`;
+    const filePath = documentData.filePath;
+    const fullUrl = filePath.startsWith('http') ? filePath : `${config.IMG_BASE_URL}${filePath}`;
 
-    if (isImage(filepath)) {
+    if (isImage(filePath)) {
       return (
         <div className="h-full overflow-auto bg-gray-50 rounded-lg p-4">
           <img src={fullUrl} alt="Document" className="max-w-full h-auto mx-auto shadow-lg rounded" />
         </div>
       );
-    } else if (isPDF(filepath)) {
+    } else if (isPDF(filePath)) {
       return (
         <div className="h-full bg-gray-50 rounded-lg">
           <iframe src={fullUrl} className="w-full h-full rounded-lg" title="PDF Document" />
@@ -154,7 +154,7 @@ const DocumentViewer: React.FC = () => {
           <div className="text-center">
             <FileText className="mx-auto h-12 w-12 text-gray-400 mb-2" />
             <p className="text-gray-500">Unsupported file type</p>
-            <p className="text-sm text-gray-400">{getFileExtension(filepath).toUpperCase()}</p>
+            <p className="text-sm text-gray-400">{getFileExtension(filePath).toUpperCase()}</p>
           </div>
         </div>
       );
@@ -165,7 +165,7 @@ const DocumentViewer: React.FC = () => {
     return (
       documentData?.filename ||
       documentData?.originalFilename ||
-      documentData?.filepath?.split('/').pop()
+      documentData?.filePath?.split('/').pop()
     );
   };
 
