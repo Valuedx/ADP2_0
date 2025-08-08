@@ -62,20 +62,15 @@ const DocumentProcessingInfo: React.FC<DocumentProcessingInfoProps> = ({ documen
 const DocumentViewer: React.FC = () => {
   const [documentData, setDocumentData] = useState<DocumentData | null>(null);
   const [loading, setLoading] = useState(true);
-  const [documentId, setDocumentId] = useState<string | null>(null);
   const [showDropdown, setShowDropdown] = useState(false);
   const [activeTab] = useState<'html'>('html');
   const [leftPanelWidth, setLeftPanelWidth] = useState(50); // percent
   const isDragging = useRef(false);
   const navigate = useNavigate();
-  const { id } = useParams();
+  const { id: documentId } = useParams();
   const userType = useSelector((state: RootState) => state.auth.userType);
   const [processingFull, setProcessingFull] = useState(false);
   const { handleError } = useErrorHandler();
-
-  useEffect(() => {
-    setDocumentId(id ?? null);
-  }, [id]);
 
   const fetchDocumentData = useCallback(async (id: string): Promise<void> => {
     try {
@@ -105,13 +100,13 @@ const DocumentViewer: React.FC = () => {
 
   useEffect(() => {
     if (!documentId) {
-      handleError({ message: 'No document ID found' });
+      toast.error('No document ID found');
       setLoading(false);
       return;
     }
 
     fetchDocumentData(documentId);
-  }, [documentId, handleError, fetchDocumentData]);
+  }, [documentId, fetchDocumentData]);
 
   const getFileExtension = (filePath: string) => {
     if (!filePath) return '';
