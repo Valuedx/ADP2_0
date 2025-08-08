@@ -61,7 +61,6 @@ const FileUploader = ({ onFileUpload }: FileUploaderProps) => {
   const documentsProcessed = useSelector((state: RootState) => state.auth.documentsProcessed);
   const maxDocuments = useSelector((state: RootState) => state.auth.maxDocumentsAllowed);
 
-  const [processFullDocument, setProcessFullDocument] = useState(false);
   const [showPageLimitWarning, setShowPageLimitWarning] = useState(false);
   const [progressMessages, setProgressMessages] = useState<string[]>([]);
   const [showProgress, setShowProgress] = useState(false);
@@ -69,7 +68,6 @@ const FileUploader = ({ onFileUpload }: FileUploaderProps) => {
   const canUpload =
     userType !== 'default' ||
     documentsProcessed < (maxDocuments || Infinity);
-  const showFullDocumentOption = userType === 'power' || userType === 'admin';
 
   useEffect(() => {
     if (userType === 'default') {
@@ -104,13 +102,12 @@ const FileUploader = ({ onFileUpload }: FileUploaderProps) => {
         ? await apiService.uploadDocument(
             file,
             doc_type,
-            processFullDocument,
+            false,
             prompt
           )
         : await apiService.uploadDocument(
             file,
-            doc_type,
-            processFullDocument
+            doc_type
           );
       onFileUpload(file);
 
@@ -281,16 +278,6 @@ const FileUploader = ({ onFileUpload }: FileUploaderProps) => {
 
       <ProcessingProgress isVisible={showProgress} progressMessages={progressMessages} />
 
-      {showFullDocumentOption && (
-        <div className="mt-4 flex items-center gap-2">
-          <input
-            type="checkbox"
-            checked={processFullDocument}
-            onChange={(e) => setProcessFullDocument(e.target.checked)}
-          />
-          <span className="text-sm">Load Full Document</span>
-        </div>
-      )}
     </div>
   );
 };
