@@ -1,7 +1,44 @@
 import config from '@/config';
 import { store } from '@/store';
+import { setAuthData, clearAuthData } from '@/store/authSlice';
 
 const getAccessToken = () => store.getState().auth.accessToken;
+const getRefreshToken = () => store.getState().auth.refreshToken;
+
+const isTokenExpired = (token: string | null) => {
+  if (!token) return true;
+  try {
+    const payload = JSON.parse(atob(token.split('.')[1]));
+    // refresh a minute before expiry
+    return payload.exp * 1000 - 60_000 < Date.now();
+  } catch {
+    return true;
+  }
+};
+
+const refreshAccessToken = async (): Promise<string | null> => {
+  const refresh = getRefreshToken();
+  if (!refresh) return null;
+  try {
+    const res = await fetch(`${config.API_BASE_URL}/token/refresh/`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ refresh }),
+    });
+    if (!res.ok) throw new Error('refresh failed');
+    const data = await res.json();
+    store.dispatch(
+      setAuthData({
+        accessToken: data.access,
+        refreshToken: data.refresh ?? refresh,
+      })
+    );
+    return data.access as string;
+  } catch {
+    store.dispatch(clearAuthData());
+    return null;
+  }
+};
 
 // Convert snake_case keys to camelCase recursively
 const toCamel = (str: string) =>
@@ -27,23 +64,41 @@ export const apiClient = async (
   options: RequestInit = {},
   requiresAuth = true
 ) => {
-  const token = requiresAuth ? getAccessToken() : null;
+  let token = requiresAuth ? getAccessToken() : null;
   const headers: HeadersInit = {
     ...(options.headers || {}),
   };
 
-  if (requiresAuth && token) {
-    headers['Authorization'] = `Bearer ${token}`;
+  if (requiresAuth) {
+    if (isTokenExpired(token)) {
+      token = await refreshAccessToken();
+    }
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    } else {
+      store.dispatch(clearAuthData());
+    }
   }
 
   if (!(options.body instanceof FormData) && !('Content-Type' in headers)) {
     headers['Content-Type'] = 'application/json';
   }
 
-  const response = await fetch(`${config.API_BASE_URL}${endpoint}`, {
+  let response = await fetch(`${config.API_BASE_URL}${endpoint}`, {
     ...options,
     headers,
   });
+
+  if (response.status === 401 && requiresAuth) {
+    const newToken = await refreshAccessToken();
+    if (newToken) {
+      headers['Authorization'] = `Bearer ${newToken}`;
+      response = await fetch(`${config.API_BASE_URL}${endpoint}`, {
+        ...options,
+        headers,
+      });
+    }
+  }
 
   if (!response.ok) {
     let errorData: unknown = null;
