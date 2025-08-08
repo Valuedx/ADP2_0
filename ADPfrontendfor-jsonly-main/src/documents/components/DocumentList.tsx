@@ -40,7 +40,7 @@ const DocumentList = ({ documents }: Props) => {
 
   const viewDocument = (doc: Doc) => {
     dispatch(setDocumentData({ documentId: doc.id, documentData: doc }));
-    navigate(`/document/${doc.id}`);
+    navigate(`/document/${encodeURIComponent(doc.id)}`);
   };
 
   return (

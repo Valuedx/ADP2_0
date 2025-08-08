@@ -3,7 +3,7 @@ import { FileText, Image, AlertCircle, Loader2, ChevronDown } from 'lucide-react
 import Navbar from '@/shared/components/Navbar';
 import * as XLSX from 'xlsx';
 import { useSelector } from 'react-redux';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { FiArrowLeft } from "react-icons/fi";
 import { toast } from 'sonner';
 import { apiService } from '@/services/apiService';
@@ -68,6 +68,7 @@ const DocumentViewer: React.FC = () => {
   const [leftPanelWidth, setLeftPanelWidth] = useState(50); // percent
   const isDragging = useRef(false);
   const navigate = useNavigate();
+  const { id } = useParams<{ id: string }>();
   const reduxDocumentId = useSelector(
     (state: RootState) => state.document.documentId
   );
@@ -107,11 +108,8 @@ const DocumentViewer: React.FC = () => {
       return;
     }
 
-    const urlParams = new URLSearchParams(window.location.search);
-    const urlId = urlParams.get('id') || window.location.pathname.split('/').pop();
-
-    if (urlId) {
-      setDocumentId(urlId);
+    if (id) {
+      setDocumentId(decodeURIComponent(id));
       return;
     }
 
@@ -128,7 +126,7 @@ const DocumentViewer: React.FC = () => {
         handleError(e as { status?: number; message?: string }, 'Error parsing localStorage data');
       }
     }
-  }, [reduxDocumentId, handleError]);
+  }, [reduxDocumentId, id, handleError]);
 
   useEffect(() => {
     if (!documentId) {
