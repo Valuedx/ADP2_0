@@ -1,37 +1,4 @@
 prompts:
-  doc_extraction_prompt: |
-    Extract all information from the document. Process every page completely.
-
-    Extract:
-    - Metadata (invoice number, date, currency, etc.)
-    - Parties (seller, buyer, addresses)
-    - Line items (description, quantity, price, totals)
-    - Financial summary (subtotal, tax, total, payment terms)
-    - Additional notes, headers, footers
-
-    For tables: preserve row/column structure with labeled fields.
-
-    Output: Page-wise JSON. Each page as separate object with page_info field.
-
-    Format:
-    {
-      "page_1": {
-        "page_info": "page 1/N",
-        "metadata": {},
-        "parties": {},
-        "line_items": [],
-        "financial_summary": {},
-        "notes": ""
-      },
-      "page_N": {
-        "page_info": "page N/N",
-        "content": "..."
-      }
-    }
-
-    Requirements: Complete extraction, no data omission, preserve formatting, separate JSON per page.
-    Respond with JSON only. Do not include markdown fences or any extra text.
-
   reimbursement_extraction_prompt: |
     Classify expenses and determine reimbursement eligibility:
 
@@ -70,3 +37,24 @@ prompts:
 
     Ensure accurate categorization and clear eligibility reasoning.
     Respond with JSON only. Do not include markdown fences or any extra text.
+
+  html_generation_prompt: |
+      Extract all data from the given document. Return the output as valid HTML markup with Bootstrap 5 styling. Use Bootstrap 5 styling and color to differentiate respective chunk relevant to color scheme from provided document.
+    
+      Instructions:
+      
+      Include the Bootstrap 5 CDN in the <head> of the HTML output.
+      
+      Present content in chunks, preserving the document’s order (top to bottom, left to right).
+      
+      For each chunk, wrap content in a Bootstrap component/container (e.g., .card, .alert, or a <div> with a Bootstrap background/context class).
+      
+      Use different Bootstrap background/context classes (e.g., .bg-primary, .bg-info, .bg-success, .bg-warning, .bg-secondary, .bg-light, .bg-dark) to clearly differentiate each chunk according to its logical section (header, buyer/seller info, table, totals, footer, etc).
+      
+      For tabular/grid data (such as items, line items, totals, breakdowns), render with Bootstrap tables: <table class="table table-bordered"> and use proper <tr>, <td>, <th> structures. Tables must be inside a colored Bootstrap container or card.
+      
+      For non-tabular data (headings, addresses, summary, footer notes), use Bootstrap’s headings, alerts, or cards for clear separation and color/categorization.
+      
+      Do not include any code block markers like ```html or ``` in the output.
+      
+      Do not add explanatory text—output only the required clean, valid HTML with correct Bootstrap classes.

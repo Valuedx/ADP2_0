@@ -15,52 +15,16 @@ const Login = () => {
   const [name, setName] = useState('');
   const [contact, setContact] = useState('');
   const [email, setEmail] = useState('');
-  const [popupMessage, setPopupMessage] = useState('');
+  const [errorMessage, setErrorMessage] = useState(''); // Changed from popupMessage to errorMessage
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const branding = useBranding();
   const { handleError } = useErrorHandler();
 
-  const Popup = ({ message }) => {
-    if (!message) return null;
-
-    return (
-      <div style={popupStyles.backdrop}>
-        <div style={popupStyles.popup}>
-          <p>{message}</p>
-        </div>
-      </div>
-    );
-  };
-
-  const popupStyles: {
-    backdrop: React.CSSProperties;
-    popup: React.CSSProperties;
-  } = {
-    backdrop: {
-      position: 'fixed',
-      top: 0,
-      left: 0,
-      width: '100vw',
-      height: '100vh',
-      backgroundColor: 'rgba(0,0,0,0.3)',
-      display: 'flex',
-      justifyContent: 'center',
-      alignItems: 'center',
-      zIndex: 9999,
-    },
-    popup: {
-      backgroundColor: '#fff',
-      padding: '20px 30px',
-      borderRadius: '8px',
-      fontSize: '16px',
-      boxShadow: '0 2px 10px rgba(0,0,0,0.2)',
-    },
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
+    setErrorMessage(''); // Clear previous error message
 
     try {
       if (isSignIn) {
@@ -75,7 +39,6 @@ const Login = () => {
           userType,
           id,
         } = data;
-        setPopupMessage(`Login successful! Welcome ${respUsername}`);
 
         dispatch(
           setAuthData({
@@ -89,31 +52,72 @@ const Login = () => {
         const usageStats = await apiService.getUsageStats();
         dispatch(updateUsageStats(usageStats));
 
-        setTimeout(() => {
-          setPopupMessage('');
-          navigate('/uploaddoc');
-        }, 2000);
+        navigate('/uploaddoc');
       } else {
-        const data = await apiService.createUser(name, email, contact, password);
-        const { message, username: respUsername } = data;
-        setPopupMessage(message || 'User created successfully!');
+        const data: any = await apiService.createUser(name, email, contact, password);
+        const message = data.message || 'User created successfully!';
+        const respUsername = data.username || name;
+
+        // Show success message below form
+        setErrorMessage(message);
 
         dispatch(
           setAuthData({
-            accessToken: data.token.access,
-            refreshToken: data.token.refresh,
+            accessToken: data.token?.access,
+            refreshToken: data.token?.refresh,
             userId: null,
-            username: respUsername ?? name,
+            username: respUsername,
             userType: 'default',
           })
         );
 
+        // Clear form and switch to sign in after success
         setTimeout(() => {
-          setPopupMessage('');
+          setName('');
+          setEmail('');
+          setContact('');
+          setPassword('');
+          setErrorMessage('');
           setIsSignIn(true);
         }, 2000);
       }
     } catch (error) {
+      // Handle specific error cases for user creation
+      if (!isSignIn) {
+        // Check if it's a known error response from our API
+        if (error && typeof error === 'object' && 'status' in error && error.status === 400) {
+          let errorMsg = 'Failed to create account. Please check your information and try again.';
+          
+          // Try to extract specific error messages from the response
+          if ('data' in error && error.data && typeof error.data === 'object') {
+            const errorData = error.data as { message?: string | Record<string, string[]> };
+            
+            // Handle serializer validation errors
+            if (errorData.message) {
+              if (typeof errorData.message === 'object') {
+                // Extract specific field errors
+                if (errorData.message.username && Array.isArray(errorData.message.username)) {
+                  errorMsg = errorData.message.username[0];
+                } else if (errorData.message.email && Array.isArray(errorData.message.email)) {
+                  errorMsg = errorData.message.email[0];
+                } else {
+                  // Generic error message from serializer
+                  errorMsg = Object.values(errorData.message)[0]?.[0] || errorMsg;
+                }
+              } else if (typeof errorData.message === 'string') {
+                // Direct error message
+                errorMsg = errorData.message;
+              }
+            }
+          }
+          
+          setErrorMessage(errorMsg);
+          // Keep fields editable so user can correct and resubmit
+          setIsLoading(false);
+          return;
+        }
+      }
+      
       handleError(
         error as { status?: number; message?: string },
         'Failed to process your request'
@@ -123,9 +127,6 @@ const Login = () => {
     }
   };
 
-
-
-
   const toggleMode = () => {
     setIsSignIn(!isSignIn);
     setUsername('');
@@ -133,6 +134,7 @@ const Login = () => {
     setName('');
     setEmail('');
     setContact('');
+    setErrorMessage(''); // Clear error message when switching modes
   };
 
   return (
@@ -217,6 +219,21 @@ const Login = () => {
           </button>
         </form>
 
+        {/* Show error or success message at the bottom of the form */}
+        {errorMessage && (
+          <div className="error-message" style={{ 
+            color: errorMessage.includes('successfully') ? 'green' : 'red', 
+            textAlign: 'center', 
+            marginTop: '10px',
+            padding: '10px',
+            borderRadius: '4px',
+            backgroundColor: errorMessage.includes('successfully') ? '#d4edda' : '#f8d7da',
+            border: `1px solid ${errorMessage.includes('successfully') ? '#c3e6cb' : '#f5c6cb'}`
+          }}>
+            {errorMessage}
+          </div>
+        )}
+
         <div className="login-options">
           <p className="sign-in-text">
             {isSignIn ? "Don't have an account? " : "Already had an account? "}
@@ -235,7 +252,6 @@ const Login = () => {
           <p>{branding?.copyright}</p>
         </div>
       </div>
-      {popupMessage && <Popup message={popupMessage} />}
     </div>
   );
 };

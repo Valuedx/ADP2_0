@@ -61,6 +61,7 @@ const FileUploader = ({ onFileUpload }: FileUploaderProps) => {
   const documentsProcessed = useSelector((state: RootState) => state.auth.documentsProcessed);
   const maxDocuments = useSelector((state: RootState) => state.auth.maxDocumentsAllowed);
 
+  const [processFullDocument, setProcessFullDocument] = useState(false);
   const [showPageLimitWarning, setShowPageLimitWarning] = useState(false);
   const [progressMessages, setProgressMessages] = useState<string[]>([]);
   const [showProgress, setShowProgress] = useState(false);
@@ -68,6 +69,7 @@ const FileUploader = ({ onFileUpload }: FileUploaderProps) => {
   const canUpload =
     userType !== 'default' ||
     documentsProcessed < (maxDocuments || Infinity);
+  const showFullDocumentOption = userType === 'power' || userType === 'admin';
 
   useEffect(() => {
     if (userType === 'default') {
@@ -89,7 +91,7 @@ const FileUploader = ({ onFileUpload }: FileUploaderProps) => {
 
   const processFile = async (file: File) => {
     if (!canUpload) {
-      handleError({ status: 403, message: 'document limit' });
+      toast.error('Document limit reached');
       return;
     }
 
@@ -102,12 +104,13 @@ const FileUploader = ({ onFileUpload }: FileUploaderProps) => {
         ? await apiService.uploadDocument(
             file,
             doc_type,
-            false,
+            processFullDocument,
             prompt
           )
         : await apiService.uploadDocument(
             file,
-            doc_type
+            doc_type,
+            processFullDocument
           );
       onFileUpload(file);
 
@@ -142,6 +145,12 @@ const FileUploader = ({ onFileUpload }: FileUploaderProps) => {
         throw new Error('Invalid response from server');
       }
     } catch (error) {
+      // Handle document limit error specifically
+      if (error && typeof error === 'object' && 'status' in error && error.status === 403) {
+        toast.error('Document limit reached');
+        return;
+      }
+      
       handleError(error, 'Upload failed', navigate);
     } finally {
       setIsUploading(false);
@@ -278,6 +287,16 @@ const FileUploader = ({ onFileUpload }: FileUploaderProps) => {
 
       <ProcessingProgress isVisible={showProgress} progressMessages={progressMessages} />
 
+      {showFullDocumentOption && (
+        <div className="mt-4 flex items-center gap-2">
+          <input
+            type="checkbox"
+            checked={processFullDocument}
+            onChange={(e) => setProcessFullDocument(e.target.checked)}
+          />
+          <span className="text-sm">Load Full Document</span>
+        </div>
+      )}
     </div>
   );
 };

@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { FileText, Image, AlertCircle, Loader2, ChevronDown } from 'lucide-react';
+import { FileText, Image, AlertCircle, Loader2, ChevronDown, FileCode, Globe } from 'lucide-react';
 import Navbar from '@/shared/components/Navbar';
+import TabView from '@/shared/components/TabView';
+import HTMLRenderer from '@/shared/components/HTMLRenderer';
 import * as XLSX from 'xlsx';
 import { useSelector } from 'react-redux';
 import { useNavigate, useParams } from 'react-router-dom';
@@ -10,6 +12,9 @@ import { apiService } from '@/services/apiService';
 import type { RootState } from '@/store';
 import { useErrorHandler } from '@/shared/hooks/useErrorHandler';
 import config from '@/config';
+import { store } from '@/store';
+
+const getAccessToken = () => store.getState().auth.accessToken;
 
 interface DocumentData {
   // URL path to the stored document
@@ -17,6 +22,7 @@ interface DocumentData {
   filename?: string;
   originalFilename?: string;
   jsonData?: Record<string, unknown> | null;
+  htmlData?: string | null;
   pagesProcessed?: number;
   isFullDocument?: boolean;
   inputToken?: number;
@@ -64,20 +70,21 @@ const DocumentViewer: React.FC = () => {
   const [documentData, setDocumentData] = useState<DocumentData | null>(null);
   const [loading, setLoading] = useState(true);
   const [showDropdown, setShowDropdown] = useState(false);
-  const [activeTab] = useState<'html'>('html');
+  // Only HTML view
   const [leftPanelWidth, setLeftPanelWidth] = useState(50); // percent
   const isDragging = useRef(false);
   const navigate = useNavigate();
   const { id: documentId } = useParams();
   const userType = useSelector((state: RootState) => state.auth.userType);
   const [processingFull, setProcessingFull] = useState(false);
+  const [generatingHTML, setGeneratingHTML] = useState(false);
   const { handleError } = useErrorHandler();
 
   const fetchDocumentData = useCallback(async (id: string): Promise<void> => {
     try {
       setLoading(true);
-      const data: DocumentData = await apiService.getDocument(id);
-      setDocumentData(data);
+      const data = await apiService.getDocument(id);
+      setDocumentData(data as DocumentData);
     } catch (err: unknown) {
       handleError(err, 'Failed to fetch document');
     } finally {
@@ -96,6 +103,25 @@ const DocumentViewer: React.FC = () => {
       handleError(err, 'Failed to process full document');
     } finally {
       setProcessingFull(false);
+    }
+  };
+
+  const handleGenerateHTML = async () => {
+    if (!documentId) return;
+    setGeneratingHTML(true);
+    try {
+      const response = await apiService.generateHTML(documentId);
+      const res = response as { status?: string; message?: string };
+      if (res.status === 'success') {
+        toast.success('HTML view generated successfully!');
+        await fetchDocumentData(documentId);
+      } else {
+        toast.error(res.message || 'Failed to generate HTML view');
+      }
+    } catch (err) {
+      handleError(err, 'Failed to generate HTML view');
+    } finally {
+      setGeneratingHTML(false);
     }
   };
 
@@ -166,23 +192,86 @@ const DocumentViewer: React.FC = () => {
   };
 
   const handleDownloadJSON = () => {
-  const json = documentData?.jsonData;
-  if (!json) return;
+    const json = documentData?.jsonData;
+    if (!json) return;
 
-  const blob = new Blob([JSON.stringify(json, null, 2)], { type: 'application/json' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  
-  const name = getDisplayFilename()?.split('.')[0] || `document_${documentId}`;
-  a.download = `${name}_data.json`;
+    const blob = new Blob([JSON.stringify(json, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
 
-  a.href = url;
-  a.click();
-  URL.revokeObjectURL(url);
-};
+    const name = getDisplayFilename()?.split('.')[0] || `document_${documentId}`;
+    a.download = `${name}_data.json`;
 
+    a.href = url;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
 
-  const handleMouseMove = (e) => {
+  const handleDownloadHTML = () => {
+    const html = documentData?.htmlData;
+    if (!html) return;
+
+    const blob = new Blob([html], { type: 'text/html' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+
+    const name = getDisplayFilename()?.split('.')[0] || `document_${documentId}`;
+    a.download = `${name}_view.html`;
+
+    a.href = url;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  // New function to handle PDF download
+  const handleDownloadPDF = async () => {
+    if (!documentId) return;
+    
+    try {
+      // Call backend API to generate PDF
+      const response = await apiService.generatePDF(documentId);
+      
+      // Create a blob from the response
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      
+      const name = getDisplayFilename()?.split('.')[0] || `document_${documentId}`;
+      a.download = `${name}_view.pdf`;
+      
+      a.href = url;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      handleError(err, 'Failed to download PDF');
+    }
+  };
+
+  // New function to handle DOC download
+  const handleDownloadDOC = async () => {
+    if (!documentId) return;
+    
+    try {
+      // Call backend API to generate DOC
+      const response = await apiService.generateDOC(documentId);
+      
+      // Create a blob from the response
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      
+      const name = getDisplayFilename()?.split('.')[0] || `document_${documentId}`;
+      a.download = `${name}_view.docx`;
+      
+      a.href = url;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      handleError(err, 'Failed to download DOC file');
+    }
+  };
+
+  const handleMouseMove = (e: MouseEvent) => {
     if (!isDragging.current) return;
     const percentage = (e.clientX / window.innerWidth) * 100;
     if (percentage > 20 && percentage < 80) {
@@ -271,14 +360,14 @@ const DocumentViewer: React.FC = () => {
 
           <div style={{ width: `${100 - leftPanelWidth}%` }} className="bg-green-100 p-4 rounded-r-lg shadow-md overflow-auto">
             <div className="flex items-center justify-between mb-4">
-  <div className="flex items-center gap-2">
-    <span className="inline-flex items-center">
-      <FileText className="w-5 h-5 text-gray-600" />
-    </span>
-    <h2 className="text-lg font-semibold text-gray-800 m-0 leading-tight">Extracted Data</h2>
-  </div>
-              <div className="flex items-center gap-2 relative">
-                {documentData && !documentData.isFullDocument && (userType === 'power' || userType === 'admin') && (
+              <div className="flex items-center gap-2">
+                <span className="inline-flex items-center">
+                  <Globe className="w-5 h-5 text-gray-600" />
+                </span>
+                <h2 className="text-lg font-semibold text-gray-800 m-0 leading-tight">HTML View</h2>
+              </div>
+              <div className="flex items-center gap-2">
+                {(userType === 'power' || userType === 'admin') && !documentData?.isFullDocument && (
                   <button
                     onClick={handleProcessFullDocument}
                     className="px-3 py-1 text-sm bg-orange-600 text-white rounded hover:bg-orange-700"
@@ -287,41 +376,78 @@ const DocumentViewer: React.FC = () => {
                     {processingFull ? 'Processing...' : 'Process Full Document'}
                   </button>
                 )}
-                <button
-                  onClick={() => setShowDropdown(!showDropdown)}
-                  className="px-3 py-1 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 flex items-center gap-1"
-                >
-                  Download <ChevronDown size={16} />
-                </button>
-                {showDropdown && (
-                  <div className="absolute right-0 mt-2 w-40 bg-white shadow-lg border rounded z-10">
-                    <button
-                      onClick={() => {
-                        handleDownloadJSON();
-                        setShowDropdown(false);
-                      }}
-                      className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                    >
-                      Download JSON
-                    </button>
-                  </div>
+                {(userType === 'power' || userType === 'admin') && !documentData?.htmlData && (
+                  <button
+                    onClick={handleGenerateHTML}
+                    className="px-3 py-1 text-sm bg-purple-600 text-white rounded hover:bg-purple-700"
+                    disabled={generatingHTML}
+                  >
+                    {generatingHTML ? 'Generating...' : 'Generate HTML'}
+                  </button>
                 )}
-
+                {/* Replace the single download button with a dropdown */}
+                <div className="relative">
+                  <button
+                    onClick={() => setShowDropdown(!showDropdown)}
+                    className="px-3 py-1 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 flex items-center gap-1"
+                    disabled={!documentData?.htmlData}
+                  >
+                    Download
+                    <ChevronDown className="w-4 h-4" />
+                  </button>
+                  
+                  {showDropdown && (
+                    <div className="absolute right-0 mt-1 w-48 bg-white rounded-md shadow-lg py-1 z-10">
+                      <button
+                        onClick={() => {
+                          handleDownloadHTML();
+                          setShowDropdown(false);
+                        }}
+                        className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 w-full text-left"
+                      >
+                        HTML Format (.html)
+                      </button>
+                      <button
+                        onClick={() => {
+                          handleDownloadPDF();
+                          setShowDropdown(false);
+                        }}
+                        className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 w-full text-left"
+                      >
+                        PDF Format (.pdf)
+                      </button>
+                      <button
+                        onClick={() => {
+                          handleDownloadDOC();
+                          setShowDropdown(false);
+                        }}
+                        className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 w-full text-left"
+                      >
+                        DOC Format (.docx)
+                      </button>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
-
-            <div className="flex-1 overflow-auto max-h-[500px] min-h-[300px] rounded border p-3 bg-gray-50">
-              {documentData?.jsonData ? (
-                <pre className="text-sm text-gray-800 whitespace-pre-wrap break-words">
-                  {JSON.stringify(documentData.jsonData, null, 2)}
-                </pre>
+            <div className="flex-1 overflow-auto max-h-[500px] min-h-[300px] rounded border p-3 bg-white">
+              {documentData?.htmlData ? (
+                <HTMLRenderer htmlContent={documentData.htmlData} />
               ) : (
                 <div className="text-gray-500 text-center">
-                  <AlertCircle className="mx-auto h-8 w-8 mb-2" />
-                  <p>No JSON data available</p>
+                  <Globe className="mx-auto h-8 w-8 mb-2" />
+                  <p>No HTML view available</p>
+                  {(userType === 'power' || userType === 'admin') && (
+                    <button
+                      onClick={handleGenerateHTML}
+                      className="mt-2 px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700"
+                      disabled={generatingHTML}
+                    >
+                      {generatingHTML ? 'Generating HTML...' : 'Generate HTML View'}
+                    </button>
+                  )}
                 </div>
               )}
-            
             </div>
           </div>
         </div>

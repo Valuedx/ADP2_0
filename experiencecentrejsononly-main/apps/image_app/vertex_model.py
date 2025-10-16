@@ -10,6 +10,7 @@ from typing import Union, Dict, Any, Optional, Callable
 from dotenv import load_dotenv
 import logging
 from PyPDF2 import PdfReader, PdfWriter
+from PyPDF2.errors import PdfReadError
 import io
 from PIL import Image
 
@@ -23,24 +24,37 @@ LOCATION = os.getenv("LOCATION")
 MODEL_ID = os.getenv("MODEL_ID") # This should be 'gemini-1.5-flash' in your .env
 service_account_key_path = os.getenv('SERVICE_ACCOUNT_KEY_PATH')
 
-# Initialize Vertex AI
-try:
-    credentials, project_id = google.auth.load_credentials_from_file(service_account_key_path)
-    vertexai.init(project=project_id, location=LOCATION, credentials=credentials)
-    print(f"Vertex AI initialized for project: {project_id}, location: {LOCATION}")
-except Exception as e:
-    print(f"Error initializing Vertex AI: {e}")
-    # You might want to raise this error or handle it more robustly in production
-    exit(1) # Exit if initialization fails, as API calls won't work
+# Initialize Vertex AI (deferred to avoid issues during Django management commands)
+_initialized = False
+_project_id = None
 
-# Load the GenerativeModel
-try:
-    model = GenerativeModel(MODEL_ID)
-    print(f"Using model: {MODEL_ID} in project: {project_id}, location: {LOCATION}")
-except Exception as e:
-    print(f"Error loading GenerativeModel '{MODEL_ID}': {e}")
-    # This might indicate an incorrect MODEL_ID or permissions issue
-    exit(1)
+def _ensure_initialized():
+    global _initialized, _project_id
+    if not _initialized:
+        try:
+            credentials, project_id = google.auth.load_credentials_from_file(service_account_key_path)
+            vertexai.init(project=project_id, location=LOCATION, credentials=credentials)
+            _project_id = project_id
+            _initialized = True
+            print(f"Vertex AI initialized for project: {project_id}, location: {LOCATION}")
+        except Exception as e:
+            print(f"Error initializing Vertex AI: {e}")
+            raise
+
+# Load the GenerativeModel (deferred)
+_model = None
+
+def _get_model():
+    global _model
+    if _model is None:
+        _ensure_initialized()
+        try:
+            _model = GenerativeModel(MODEL_ID)
+            print(f"Using model: {MODEL_ID} in project: {_project_id}, location: {LOCATION}")
+        except Exception as e:
+            print(f"Error loading GenerativeModel '{MODEL_ID}': {e}")
+            raise
+    return _model
 
 
 # Retry configuration
@@ -136,6 +150,9 @@ def limit_pdf_pages(file_path: str, max_pages: int = 3) -> str:
             logger.info(f"Created limited PDF with {pages_to_add} pages: {limited_file_path}")
             return limited_file_path
 
+    except PdfReadError as e:
+        logger.error(f"Invalid or corrupted PDF file: {e}")
+        raise ValueError(f"Invalid or corrupted PDF file: {str(e)}")
     except Exception as e:
         logger.error(f"Error limiting PDF pages: {e}")
         return file_path  # Return original file if limiting fails
@@ -180,6 +197,9 @@ def process_input_with_page_limit(input_data, max_pages: int = None) -> tuple[Pa
                             actual_pages = min(total_pages, max_pages)
 
                         file_path = limit_pdf_pages(input_data, max_pages)
+                    except PdfReadError as e:
+                        logger.error(f"Invalid or corrupted PDF file: {e}")
+                        raise ValueError(f"Invalid or corrupted PDF file: {str(e)}")
                     except Exception as e:
                         logger.warning(f"Could not limit PDF pages: {e}, processing full document")
                         actual_pages = 1  # Fallback
@@ -221,7 +241,7 @@ def call_gemini_api_with_streaming(
     temperature: float = 0.9,
     top_p: float = 1.0,
     top_k: int = 32,
-    max_output_tokens: int = 65536,
+    max_output_tokens: int = 65000,
     max_pages: int = None,
     progress_callback: Optional[Callable[[str], None]] = None
 ) -> Dict[str, Any]:
@@ -298,7 +318,7 @@ def call_gemini_api_with_streaming(
             update_progress("Sending request to AI model...")
 
             try:
-                response = model.generate_content(
+                response = _get_model().generate_content(
                     contents=content_parts,
                     generation_config=generation_config,
                     stream=False

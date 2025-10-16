@@ -11,8 +11,10 @@ export function handleError(
   context?: string,
   navigate?: (path: string) => void
 ) {
-  if (error.status === 403 && error.message?.includes('document limit')) {
-    toast.error('Document limit reached. Please contact support for upgrade.')
+  // Check for document limit error - handle both simple and detailed messages
+  if (error.status === 403 && error.message && 
+      (error.message.includes('document limit') || error.message.includes('Document limit reached'))) {
+    toast.error('Document limit reached')
     return
   }
 
@@ -22,7 +24,7 @@ export function handleError(
   }
 
   if (error.status === 401) {
-    toast.error('Session expired. Please log in again.')
+    toast.error('Incorrect Credential. Please try again.')
     if (navigate) {
       navigate('/')
     } else if (typeof window !== 'undefined') {

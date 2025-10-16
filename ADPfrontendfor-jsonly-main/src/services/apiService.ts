@@ -1,4 +1,6 @@
 import { apiClient } from '@/services/apiClient';
+import config from '@/config';
+import { store } from '@/store';
 
 export interface LoginResponse {
   access: string;
@@ -103,7 +105,7 @@ export const apiService = {
   },
 
   getDocument: async (documentId: string) => {
-    return apiClient(`/get-document/${documentId}/`);
+    return apiClient(`/get-document/${encodeURIComponent(documentId)}/`);
   },
 
   requestPasswordReset: async (value: string) => {
@@ -122,5 +124,36 @@ export const apiService = {
       method: 'POST',
       body: JSON.stringify({ user_id: userId, action, ...data }),
     });
+  },
+
+  generateHTML: async (documentId: string) => {
+    return apiClient('/generate-html/', {
+      method: 'POST',
+      body: JSON.stringify({ document_id: documentId }),
+    });
+  },
+
+  generatePDF: async (documentId: string) => {
+    const response = await fetch(`${config.API_BASE_URL}/generate-pdf/`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${store.getState().auth.accessToken}`
+      },
+      body: JSON.stringify({ document_id: documentId })
+    });
+    return response;
+  },
+
+  generateDOC: async (documentId: string) => {
+    const response = await fetch(`${config.API_BASE_URL}/generate-doc/`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${store.getState().auth.accessToken}`
+      },
+      body: JSON.stringify({ document_id: documentId })
+    });
+    return response;
   },
 };

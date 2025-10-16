@@ -12,6 +12,7 @@ class Document(models.Model):
     file_path = models.CharField(max_length=255, blank=True)
     file = models.FileField(upload_to='uploads/')
     json_data = models.JSONField(blank=True, null=True)
+    html_data = models.TextField(blank=True, null=True)  # HTML view data in CommonMark format
     entry_date = models.DateField(default=timezone.now)
     document_type = models.TextField(blank=True, null=True)
     input_token =  models.IntegerField(blank=True, null=True)

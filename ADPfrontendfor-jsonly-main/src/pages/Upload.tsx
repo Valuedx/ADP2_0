@@ -128,7 +128,7 @@ const Upload = () => {
             <div className="bg-gradient-to-r from-orange-400 to-yellow-300 px-4 py-3 flex justify-between items-center">
               <div className="flex items-center space-x-2">
                 {getExampleAttributes(selectedExampleData.title).icon}
-                <h3 className="text-lg font-bold text-white">{selectedExampleData.title} - Extracted Data</h3>
+                <h3 className="text-lg font-bold text-white">{selectedExampleData.title} - HTML View</h3>
               </div>
               <button
                 onClick={() => setSelectedExample(null)}
@@ -139,36 +139,19 @@ const Upload = () => {
               </button>
             </div>
 
-            {/* Content */}
-            <div className="grid grid-cols-1 md:grid-cols-2">
-              {/* Left - Image */}
-              <div className="border-r border-gray-200 bg-gray-50">
-                <div className="p-3 border-b border-gray-200">
-                  <h4 className="font-semibold text-gray-900 text-sm flex items-center">
-                    <Image className="w-4 h-4 mr-2" /> Original Document
-                  </h4>
-                </div>
-                <div className="h-96 overflow-auto p-4">
-                  <img
-                    src={selectedExampleData.src}
-                    alt={`${selectedExampleData.title} preview`}
-                    className="w-full object-contain rounded-md shadow-sm"
-                  />
-                </div>
+            {/* Content: Only Image/HTML View */}
+            <div className="bg-gray-50">
+              <div className="p-3 border-b border-gray-200">
+                <h4 className="font-semibold text-gray-900 text-sm flex items-center">
+                  <Image className="w-4 h-4 mr-2" /> Original Document
+                </h4>
               </div>
-
-              {/* Right - JSON Data */}
-              <div className="bg-white">
-                <div className="p-3 border-b border-gray-200">
-                  <h4 className="font-semibold text-gray-900 text-sm flex items-center">
-                    <FileText className="w-4 h-4 mr-2 text-gray-600" /> Extracted JSON Data
-                  </h4>
-                </div>
-                <div className="h-96 overflow-auto p-4">
-                  <pre className="text-sm text-gray-700 whitespace-pre-wrap font-mono leading-relaxed">
-                    {JSON.stringify(selectedExampleData.data, null, 2)}
-                  </pre>
-                </div>
+              <div className="h-96 overflow-auto p-4">
+                <img
+                  src={selectedExampleData.src}
+                  alt={`${selectedExampleData.title} preview`}
+                  className="w-full object-contain rounded-md shadow-sm"
+                />
               </div>
             </div>
 

@@ -129,3 +129,20 @@ prompts:
     "Description": "This section should include a summary of the entire expense report. Columns: 'Document 1', 'Vendor Name', 'Expense Type', 'Date of Expense', 'Expense Amount (INR)', 'Reimbursement Eligibility'. Below the table, provide a 'Total Amount for Reimbursement (INR)' for this section."
     }
     }
+
+
+
+    +++++++++++++++++++++++++++++++
+
+
+    html_generation_prompt: |
+    Convert document to simple structured (example: put visible borders to tables) in HTML format(use commonmark style  easy for humans to view,read and comprehend). Use basic HTML tags only.
+    Structure:
+    - Use <h1>-<h6> for headings
+    - Use <p> for paragraphs
+    - Use <table> for tables with <th> headers and <td> cells
+    - Use <ul>/<ol> for lists
+    - Use <strong>/<em> for emphasis
+
+    Keep it simple - no CSS, no complex styling, no fancy formatting.
+    Output clean HTML content only. Start directly with content, no wrappers.

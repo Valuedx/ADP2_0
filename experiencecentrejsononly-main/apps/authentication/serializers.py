@@ -15,7 +15,23 @@ class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = CustomUser
         fields = ['username', 'email', 'password','phone_number']
-        extra_kwargs = {'password': {'write_only': True}}
+        extra_kwargs = {
+            'password': {'write_only': True},
+            'username': {'error_messages': {'unique': 'This username is already taken. Please choose a different username.'}},
+            'email': {'error_messages': {'unique': 'This email is already registered. Please use a different email or sign in with your existing account.'}}
+        }
+    
+    def validate_username(self, value):
+        """Check if username already exists"""
+        if CustomUser.objects.filter(username=value).exists():
+            raise serializers.ValidationError("This username is already taken. Please choose a different username.")
+        return value
+    
+    def validate_email(self, value):
+        """Check if email already exists"""
+        if CustomUser.objects.filter(email=value).exists():
+            raise serializers.ValidationError("This email is already registered. Please use a different email or sign in with your existing account.")
+        return value
 
 
 class ProfileSerializer(serializers.ModelSerializer):

@@ -3,11 +3,14 @@ from django.urls import path
 from django.conf.urls.static import static
 from django.conf import settings
 from .views import (
-    GetDocumentByIdView, 
-    UserDocumentView, 
+    GetDocumentByIdView,
+    UserDocumentView,
     FilteredDocumentView,
     UploadAndProcessFileView,
-    ProcessFullDocumentView
+    ProcessFullDocumentView,
+    GenerateHTMLView,
+    GeneratePDFView,
+    GenerateDOCView
 )
 from .admin_views import (
     AdminUserReportView,
@@ -24,6 +27,9 @@ urlpatterns = [
     
     # New endpoints
     path('process-full-document/', ProcessFullDocumentView.as_view(), name='process-full-document'),
+    path('generate-html/', GenerateHTMLView.as_view(), name='generate-html'),
+    path('generate-pdf/', GeneratePDFView.as_view(), name='generate-pdf'),
+    path('generate-doc/', GenerateDOCView.as_view(), name='generate-doc'),
     path('usage-stats/', UserUsageStatsView.as_view(), name='user-usage-stats'),
     
     # Admin endpoints
@@ -31,5 +37,3 @@ urlpatterns = [
     path('admin/manage-user/', AdminUserManagementView.as_view(), name='admin-manage-user'),
     
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
-
-

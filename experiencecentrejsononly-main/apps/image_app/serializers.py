@@ -11,6 +11,7 @@ class DocumentSerializer(serializers.ModelSerializer):
         fields = [
             "id",
             "userid",
+            "html_data",
             "filePath",
             "file",
             "json_data",

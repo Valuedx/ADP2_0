@@ -35,7 +35,7 @@ class CreateUserAPIView(APIView):
 
             if not serializer.is_valid():
                 logger.warning("Invalid user data received during registration.")
-                return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+                return Response({'message': serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
 
             email = serializer.validated_data['email']
             username = serializer.validated_data['username']
@@ -43,26 +43,25 @@ class CreateUserAPIView(APIView):
             # Check for duplicate email
             if CustomUser.objects.filter(email=email).exists():
                 logger.warning(f"Email already registered: {email}")
-                return Response({'message': 'Email already registered'}, status=status.HTTP_400_BAD_REQUEST)
+                return Response({'error': 'email_exists', 'message': 'This email is already registered. Please use a different email or sign in with your existing account.'}, status=status.HTTP_400_BAD_REQUEST)
 
             # Check for duplicate username
             if CustomUser.objects.filter(username=username).exists():
                 logger.warning(f"Username already taken: {username}")
-                return Response({'message': 'Username already taken'}, status=status.HTTP_400_BAD_REQUEST)
+                return Response({'error': 'username_exists', 'message': 'This username is already taken. Please choose a different username.'}, status=status.HTTP_400_BAD_REQUEST)
 
-            password = serializer.validated_data['password']
-            phone_number = serializer.validated_data['phone_number']
-
-            # Create the user
-            user = CustomUser.objects.create_user(username=username, email=email, password=password)
-            user.phone_number = phone_number
+            # If serializer is valid, create the user
+            user = serializer.save()
+            user.set_password(serializer.validated_data['password'])
+            user.phone_number = serializer.validated_data.get('phone_number')
             user.save()
 
             token = get_tokens_for_user(user)
-            logger.info(f"User created successfully: {username} (Email: {email})")
+            logger.info(f"User created successfully: {user.username} (Email: {user.email})")
 
             return Response({
                 'token': token,
+                'username': user.username,
                 'message': 'User created successfully'
             }, status=status.HTTP_201_CREATED)
 
@@ -160,8 +159,9 @@ class PasswordResetRequestView(APIView):
             else:
                 user = CustomUser.objects.get(username=username_or_email)
         except CustomUser.DoesNotExist:
-            # Same response for security (don't reveal if user exists)
-            return Response({"message": "If the email/username is registered, a reset token has been sent."})
+            # Inform frontend that the provided email/username is invalid
+            logger.warning(f"Password reset requested for non-existent identifier: {username_or_email}")
+            return Response({"message": "Invalid email or username"}, status=status.HTTP_400_BAD_REQUEST)
 
         uid = urlsafe_base64_encode(force_bytes(user.pk))
         token = default_token_generator.make_token(user)

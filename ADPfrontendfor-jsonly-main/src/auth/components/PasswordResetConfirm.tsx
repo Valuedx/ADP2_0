@@ -69,13 +69,10 @@ const PasswordResetConfirm = () => {
       );
       setMessage('Password has been reset successfully');
 
-      // Auto-navigate after a short delay
+      // Auto-navigate to login page after a short delay
       setTimeout(() => {
-        const shouldRedirect = window.confirm('Password reset successful! Go to login page?');
-        if (shouldRedirect) {
-          navigate('/');
-        }
-      }, 1000);
+        navigate('/');
+      }, 2000);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'An unknown error occurred';
       if (errorMessage.includes('invalid token') || errorMessage.includes('invalid uid')) {

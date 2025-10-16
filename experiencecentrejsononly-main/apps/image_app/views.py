@@ -1,15 +1,10 @@
 import os
 import json
+import shutil
 from dotenv import load_dotenv
 from django.conf import settings
 from django.core.files.storage import default_storage
-from django.http import (
-    JsonResponse,
-    HttpResponseBadRequest,
-    StreamingHttpResponse,
-    FileResponse,
-    Http404,
-)
+from django.http import JsonResponse, HttpResponseBadRequest, StreamingHttpResponse, HttpResponse
 from django.views.decorators.csrf import csrf_exempt
 
 from .models import Document
@@ -25,13 +20,18 @@ from cryptography.fernet import InvalidToken
 
 from django.utils.dateparse import parse_date
 from cryptography.fernet import Fernet
-
+from PyPDF2 import PdfReader, PdfWriter
 import logging
 from .logger import log_exception, log_exceptions
 import uuid
 import time
-import threading
-import queue
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
+from reportlab.lib.styles import getSampleStyleSheet
+from reportlab.lib import colors
+from io import BytesIO
+from bs4 import BeautifulSoup
+
+# Using single HTML-only LLM call for uploads and full-document processing
 
 # Setup logger
 logger = logging.getLogger(__name__)
@@ -40,8 +40,30 @@ logger = logging.getLogger(__name__)
 from .vertex_model import call_gemini_api_with_streaming, MODEL_ID
 import yaml
 import configparser
+import io
+from PIL import Image
 
-# ... (keep your existing APP_CONFIG loading code)
+def make_llm_call(prompt_text, input_data, response_mime_type, max_pages, progress_callback, call_type):
+    """Helper function to make a single LLM call"""
+    try:
+        progress_callback(f"Starting {call_type} generation...")
+        start_time = time.time()
+
+        response = call_gemini_api_with_streaming(
+            prompt_text=prompt_text,
+            input_data=input_data,
+            response_mime_type=response_mime_type,
+            max_pages=max_pages,
+            progress_callback=progress_callback
+        )
+        response_time = time.time() - start_time
+        progress_callback(f"Completed {call_type} generation in {response_time:.2f}s")
+
+        return response, None  # Return (response, error)
+    except Exception as e:
+        error_msg = f"Error in {call_type} generation: {str(e)}"
+        logger.error(error_msg, exc_info=True)
+        return None, error_msg
 
 # Initialize prompts
 APP_CONFIG = {}
@@ -65,8 +87,6 @@ def load_prompts():
         raise
 
 load_prompts()
-
-# ... (keep your existing environment loading and helper functions)
 
 env_path = os.path.join(settings.BASE_DIR, '.env') if hasattr(settings, 'BASE_DIR') else None
 if env_path and os.path.exists(env_path):
@@ -165,6 +185,7 @@ class GetDocumentByIdView(APIView):
                     "status": "success",
                     "filePath": file_url,
                     "json_data": doc.json_data,
+                    "html_data": doc.html_data,
                     "input_token": doc.input_token,
                     "output_token": doc.output_token,
                     "api_response_time": doc.api_response_time,
@@ -189,24 +210,6 @@ class GetDocumentByIdView(APIView):
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 
-
-class ProtectedDocumentView(APIView):
-    """Serve documents only to authorized users."""
-
-    def get(self, request, file_path):
-        try:
-            doc = get_object_or_404(Document, file=file_path)
-            user = request.user
-            is_admin = getattr(user, "user_type", "") == "admin"
-            if not user.is_authenticated or (not is_admin and doc.userid_id != user.id):
-                raise Http404()
-            return FileResponse(doc.file.open("rb"))
-        except Http404:
-            raise
-        except Exception:
-            logger.error("Error serving protected document", exc_info=True)
-            raise Http404()
-
 class UserDocumentView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -229,9 +232,19 @@ class UserDocumentView(APIView):
             serialized_data = serializer.data
             logger.info(f"{len(serialized_data)} documents retrieved successfully.")
 
-            # Encrypt the 'id' field
-            for doc in serialized_data:
-                doc['id'] = encrypt_id(doc['id'])
+            # Encrypt the 'id' field and ensure html_data is present to be consistent with UserDocumentView
+            for idx, doc in enumerate(serialized_data):
+                try:
+                    doc['id'] = encrypt_id(doc['id'])
+                except Exception:
+                    logger.exception(f"Failed to encrypt document id for doc: {doc.get('id')}")
+                # Ensure html_data exists in the serialized output (copy from model object if needed)
+                try:
+                    model_doc = documents[idx]
+                    doc['html_data'] = getattr(model_doc, 'html_data', None)
+                except Exception:
+                    # leave html_data as-is if any issue
+                    pass
 
             total_input_tokens = sum(getattr(doc, "input_token", 0) or 0 for doc in documents)
             total_output_tokens = sum(getattr(doc, "output_token", 0) or 0 for doc in documents)
@@ -302,12 +315,25 @@ class FilteredDocumentView(APIView):
 
             documents = Document.objects.filter(userid=user_id_int, entry_date=entry_date)
             serializer = DocumentSerializer(documents, many=True)
+            serialized_data = serializer.data
+
+            # Encrypt ids and ensure html_data present in the serialized output
+            for idx, doc in enumerate(serialized_data):
+                try:
+                    doc['id'] = encrypt_id(doc['id'])
+                except Exception:
+                    logger.exception(f"Failed to encrypt document id for doc: {doc.get('id')}")
+                try:
+                    model_doc = documents[idx]
+                    doc['html_data'] = getattr(model_doc, 'html_data', None)
+                except Exception:
+                    pass
 
             logger.info(f"{documents.count()} documents found for user_id={user_id} on {entry_date}")
 
             return Response({
                 "count": documents.count(),
-                "documents": serializer.data
+                "documents": serialized_data
             }, status=status.HTTP_200_OK)
 
         except Exception:
@@ -360,7 +386,7 @@ class UploadAndProcessFileView(APIView):
             prompt_text = prompt_text_from_request
         else:
             if doc_type == 'docextraction':
-                prompt_text = APP_CONFIG.get('prompts', {}).get('doc_extraction_prompt', '')
+                prompt_text = APP_CONFIG.get('prompts', {}).get('html_generation_prompt', '')
             elif doc_type == 'Bill Reimbursment':
                 prompt_text = APP_CONFIG.get('prompts', {}).get('reimbursement_extraction_prompt', '')
             else:
@@ -406,120 +432,80 @@ class UploadAndProcessFileView(APIView):
                         "message": message
                     })
 
-                # Extract structured JSON with streaming and page limitation
+                # Extract structured data using a single HTML-only call (no threading, no JSON)
                 try:
-                    api_start = time.time()
-                    response = call_gemini_api_with_streaming(
-                        prompt_text=prompt_text,
-                        input_data=absolute_path,
-                        response_mime_type="application/json",
-                        max_pages=max_pages,
-                        progress_callback=progress_callback
+                    progress_callback("Starting HTML generation...")
+                    overall_start = time.time()
+
+                    # Use HTML prompt for upload processing
+                    html_prompt_text = APP_CONFIG.get('prompts', {}).get('html_generation_prompt', '')
+                    if not html_prompt_text:
+                        logger.error("HTML prompt not configured for uploads.")
+                        return Response({"error": "HTML prompt not configured"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+                    html_response, error = make_llm_call(
+                        html_prompt_text,
+                        absolute_path,
+                        "text/plain",
+                        max_pages,
+                        progress_callback,
+                        "HTML"
                     )
-                    api_response_time = time.time() - api_start
 
-                    if not response or 'candidates' not in response:
-                        logger.error(
-                            "Invalid API response format for JSON extraction.",
-                            exc_info=True,
-                        )
-                        return Response(
-                            {"error": "Invalid API response format"},
-                            status=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                        )
+                    overall_time = time.time() - overall_start
+                    progress_callback(f"HTML generation completed in {overall_time:.2f}s")
 
+                    if error or not html_response:
+                        logger.error(f"HTML generation failed: {error}")
+                        return Response({"error": f"Failed to generate HTML: {error}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+                    if 'candidates' not in html_response:
+                        logger.error("Invalid HTML response format from API.", exc_info=True)
+                        return Response({"error": "Invalid HTML response format"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+                    # Extract HTML content and pages processed (if provided)
                     try:
-                        result_json = response['candidates'][0]['content']['parts'][0]['text']
-                        pages_processed = response.get('pagesProcessed', 1)
-
-                        if not result_json:
-                            logger.error("Empty JSON response from API.", exc_info=True)
-                            return Response(
-                                {"error": "Empty JSON response from API"},
-                                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                            )
-
-                        parsed_json = safe_json_load(result_json)
-
-                        if parsed_json is None:
-                            logger.error(
-                                "Failed to parse JSON: Invalid JSON format",
-                                exc_info=True,
-                            )
-                            return Response(
-                                {"error": "Invalid JSON format received from API"},
-                                status=status.HTTP_400_BAD_REQUEST,
-                            )
-
-                        if isinstance(parsed_json, list) and parsed_json:
-                            parsed_json = parsed_json[0]
-
-                        if not isinstance(parsed_json, dict):
-                            logger.error("Parsed JSON is not a dictionary.", exc_info=True)
-                            return Response(
-                                {"error": "Invalid JSON format received from API"},
-                                status=status.HTTP_400_BAD_REQUEST,
-                            )
-
-                        logger.debug("Successfully parsed JSON response")
-
-                    except KeyError as e:
-                        logger.error(f"Missing key in API response: {str(e)}", exc_info=True)
-                        return Response(
-                            {"error": "Invalid API response format"},
-                            status=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                        )
+                        html_content = html_response['candidates'][0]['content']['parts'][0]['text']
+                        html_data = html_content.strip() if html_content and html_content.strip() else None
+                        pages_processed = html_response.get('pagesProcessed', 1) if isinstance(html_response, dict) else 1
+                        logger.debug("Successfully generated HTML response")
                     except Exception as e:
-                        logger.error(
-                            f"Unexpected error processing API response: {str(e)}",
-                            exc_info=True,
-                        )
-                        return Response(
-                            {"error": "Error processing API response"},
-                            status=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                        )
+                        logger.error(f"Error extracting HTML from response: {str(e)}", exc_info=True)
+                        return Response({"error": "Error processing HTML response"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-                except json.JSONDecodeError as e:
-                    logger.error(
-                        f"JSON decoding error during extraction: {str(e)}",
-                        exc_info=True,
-                    )
-                    return Response(
-                        {"error": "Invalid JSON received from API"},
-                        status=status.HTTP_400_BAD_REQUEST,
-                    )
                 except Exception as e:
-                    logger.error(
-                        f"Error during JSON extraction API call: {str(e)}",
-                        exc_info=True,
-                    )
-                    return Response(
-                        {"error": f"Error during JSON extraction: {str(e)}"},
-                        status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    logger.error(f"Error during HTML generation call: {str(e)}", exc_info=True)
+                    return Response({"error": f"Error during HTML generation: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+                # Calculate total tokens based on HTML generation usage metadata
+                total_input_tokens = 0
+                total_output_tokens = 0
+
+                if html_data and html_response and isinstance(html_response, dict) and 'usageMetadata' in html_response:
+                    html_usage = html_response['usageMetadata']
+                    total_input_tokens += html_usage.get('promptTokenCount', 0)
+                    total_output_tokens += html_usage.get('candidatesTokenCount', 0)
+                    logger.info(
+                        f"HTML Generation - Input Tokens: {html_usage.get('promptTokenCount', 0)}, Output Tokens: {html_usage.get('candidatesTokenCount', 0)}"
                     )
 
-                if 'usageMetadata' in response:
-                    usage_metadata = response['usageMetadata']
-                    input_tokens = usage_metadata.get('promptTokenCount', 0)
-                    output_tokens = usage_metadata.get('candidatesTokenCount', 0)
-                    logger.info(
-                        f"JSON Extraction - Input Tokens: {input_tokens}, Output Tokens: {output_tokens}"
-                    )
-                else:
-                    logger.info(
-                        "JSON Extraction - Usage metadata not available in the response."
-                    )
+                input_tokens = total_input_tokens
+                output_tokens = total_output_tokens
 
-                json_filename = os.path.splitext(relative_path)[0] + ".json"
-                json_path = os.path.join(settings.MEDIA_ROOT, json_filename)
-                with open(json_path, "w", encoding="utf-8") as jf:
-                    json.dump(parsed_json, jf, indent=2, ensure_ascii=False)
+                # Ensure api_response_time is defined. Prefer previously computed overall_time
+                try:
+                    api_response_time = overall_time
+                except NameError:
+                    try:
+                        api_response_time = time.time() - overall_start
+                    except NameError:
+                        api_response_time = None
 
                 db_start = time.time()
                 doc = Document.objects.create(
                     file_path=relative_path,
                     file=relative_path,
-                    json_data=parsed_json,
+                    html_data=html_data,
                     userid=user,
                     document_type=doc_type,
                     input_token=input_tokens,
@@ -543,10 +529,11 @@ class UploadAndProcessFileView(APIView):
 
                 # Prepare response with usage information
                 response_data = {
-                    "status": "success", 
+                    "status": "success",
                     "document_id": encrypted_doc_id,
                     "pages_processed": pages_processed,
                     "is_full_document": doc.is_full_document,
+                    "html_generated": html_data is not None,
                     "progress_messages": progress_messages,
                     "usage_info": user.get_usage_info()
                 }
@@ -615,11 +602,11 @@ class ProcessFullDocumentView(APIView):
                     {"status": "error", "message": "Original file not found"},
                     status=status.HTTP_404_NOT_FOUND
                 )
-            
+
             # Determine prompt text based on document type
             prompt_text = None
             if doc.document_type == 'docextraction':
-                prompt_text = APP_CONFIG.get('prompts', {}).get('doc_extraction_prompt', '')
+                prompt_text = APP_CONFIG.get('prompts', {}).get('html_generation_prompt', '')
             elif doc.document_type == 'Bill Reimbursment':
                 prompt_text = APP_CONFIG.get('prompts', {}).get('reimbursement_extraction_prompt', '')
             else:
@@ -640,38 +627,72 @@ class ProcessFullDocumentView(APIView):
                     "message": message
                 })
             
-            # Process full document (no page limit)
-            api_start = time.time()
-            response = call_gemini_api_with_streaming(
-                prompt_text=prompt_text,
-                input_data=absolute_path,
-                response_mime_type="application/json",
-                max_pages=None,  # No page limit
-                progress_callback=progress_callback
+            # Process full document using a single HTML-only generation (no page limit)
+            progress_callback("Starting full-document HTML generation...")
+            overall_start = time.time()
+
+            html_prompt_text = APP_CONFIG.get('prompts', {}).get('html_generation_prompt', '')
+            if not html_prompt_text:
+                return Response({"status": "error", "message": "HTML prompt not configured for full document processing"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+            # Call LLM once for full HTML generation
+            html_response, error = make_llm_call(
+                html_prompt_text,
+                absolute_path,
+                "text/plain",
+                None,  # no page limit for full document
+                progress_callback,
+                "HTML"
             )
-            api_response_time = time.time() - api_start
-            
-            # Process response
-            result_json = response['candidates'][0]['content']['parts'][0]['text']
-            pages_processed = response.get('pagesProcessed', 1)
-            parsed_json = safe_json_load(result_json)
-            
-            # Update token usage
-            if 'usageMetadata' in response:
-                usage_metadata = response['usageMetadata']
-                input_tokens = usage_metadata.get('promptTokenCount', 0)
-                output_tokens = usage_metadata.get('candidatesTokenCount', 0)
-            else:
-                input_tokens = doc.input_token or 0
-                output_tokens = doc.output_token or 0
-            
+
+            overall_time = time.time() - overall_start
+            progress_callback(f"Full document HTML generation completed in {overall_time:.2f}s")
+
+            if error or not html_response:
+                logger.error(f"Failed to generate full-document HTML: {error}")
+                return Response({"status": "error", "message": f"Failed to generate HTML: {error}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+            if 'candidates' not in html_response:
+                logger.error("Invalid HTML response format for full document.", exc_info=True)
+                return Response({"status": "error", "message": "Invalid HTML response format"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+            # Extract HTML content
+            try:
+                html_content = html_response['candidates'][0]['content']['parts'][0]['text']
+                html_data = html_content.strip() if html_content and html_content.strip() else None
+                pages_processed = html_response.get('pagesProcessed', 1) if isinstance(html_response, dict) else 1
+                logger.debug("Successfully generated full-document HTML response")
+            except Exception as e:
+                logger.error(f"Error extracting HTML from full-document response: {str(e)}", exc_info=True)
+                return Response({"status": "error", "message": "Error processing HTML response"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+            # Calculate tokens from HTML usage metadata
+            total_input_tokens = 0
+            total_output_tokens = 0
+            if html_data and html_response and isinstance(html_response, dict) and 'usageMetadata' in html_response:
+                html_usage = html_response['usageMetadata']
+                total_input_tokens += html_usage.get('promptTokenCount', 0)
+                total_output_tokens += html_usage.get('candidatesTokenCount', 0)
+
+            input_tokens = total_input_tokens
+            output_tokens = total_output_tokens
+
             # Update document with full processing results
-            doc.json_data = parsed_json
+            # Only HTML view: do not assign json_data
+            doc.html_data = html_data
             doc.pages_processed = pages_processed
             doc.is_full_document = True
             doc.input_token = input_tokens
             doc.output_token = output_tokens
-            doc.api_response_time = api_response_time
+            # Ensure api_response_time is defined in this scope
+            # Prefer overall_time if available, otherwise try to compute from overall_start
+            if 'overall_time' in locals():
+                doc.api_response_time = overall_time
+            else:
+                try:
+                    doc.api_response_time = time.time() - overall_start
+                except Exception:
+                    doc.api_response_time = None
             doc.save()
             
             # Update user usage (difference in pages)
@@ -692,6 +713,317 @@ class ProcessFullDocumentView(APIView):
             
         except Exception as e:
             logger.error(f"Error in ProcessFullDocumentView: {str(e)}", exc_info=True)
+            return Response(
+                {"status": "error", "message": f"An error occurred: {str(e)}"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+# New view for generating HTML view of existing documents
+class GenerateHTMLView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        document_id = request.data.get("document_id")
+
+        if not document_id:
+            return Response(
+                {"status": "error", "message": "Missing document_id"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        user = request.user
+
+        # Check if user is power user or admin
+        if user.user_type not in ['power', 'admin']:
+            return Response(
+                {"status": "error", "message": "Only power users and admins can generate HTML views"},
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+        try:
+            decrypted_id = decrypt_id(document_id)
+            doc = get_object_or_404(Document, id=decrypted_id)
+
+            # Check ownership
+            is_admin = user.user_type == 'admin'
+            if not is_admin and doc.userid_id != user.id:
+                return Response(
+                    {"error": "You do not have permission to process this document."},
+                    status=status.HTTP_403_FORBIDDEN,
+                )
+
+            # Check if already has HTML data
+            if doc.html_data:
+                return Response({
+                    "status": "success",
+                    "message": "HTML view already exists",
+                    "html_data": doc.html_data,
+                    "usage_info": user.get_usage_info()
+                }, status=status.HTTP_200_OK)
+
+            # Get the original file path
+            absolute_path = os.path.join(settings.MEDIA_ROOT, doc.file_path)
+
+            if not os.path.exists(absolute_path):
+                return Response(
+                    {"status": "error", "message": "Original file not found"},
+                    status=status.HTTP_404_NOT_FOUND
+                )
+
+            # Determine prompt text for HTML generation
+            prompt_text = APP_CONFIG.get('prompts', {}).get('html_generation_prompt', '')
+
+            if not prompt_text:
+                return Response(
+                    {"status": "error", "message": "Could not determine HTML generation prompt"},
+                    status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                )
+
+            # Progress tracking
+            progress_messages = []
+
+            def progress_callback(message):
+                progress_messages.append({
+                    "timestamp": time.time(),
+                    "message": message
+                })
+
+            # Determine page limit based on document's current processing
+            max_pages = None if doc.is_full_document else 3
+
+            # Generate HTML view using helper function
+            response, error = make_llm_call(
+                prompt_text,
+                absolute_path,
+                "text/plain",
+                max_pages,
+                progress_callback,
+                "HTML"
+            )
+
+            if error:
+                return Response(
+                    {"status": "error", "message": f"Failed to generate HTML: {error}"},
+                    status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                )
+
+            if not response or 'candidates' not in response:
+                return Response(
+                    {"status": "error", "message": "Invalid HTML response from API"},
+                    status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                )
+
+            # Process response
+            html_content = response['candidates'][0]['content']['parts'][0]['text']
+
+            if not html_content:
+                return Response(
+                    {"status": "error", "message": "Empty HTML response from API"},
+                    status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                )
+
+            # Update document with HTML data
+            doc.html_data = html_content
+            doc.save()
+
+            progress_callback("HTML generation completed successfully")
+
+            return Response({
+                "status": "success",
+                "message": "HTML view generated successfully",
+                "html_data": html_content,
+                "progress_messages": progress_messages,
+                "usage_info": user.get_usage_info()
+            }, status=status.HTTP_200_OK)
+
+        except Exception as e:
+            logger.error(f"Error in GenerateHTMLView: {str(e)}", exc_info=True)
+            return Response(
+                {"status": "error", "message": f"An error occurred: {str(e)}"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+
+# New view for generating PDF from HTML content
+class GeneratePDFView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        document_id = request.data.get("document_id")
+
+        if not document_id:
+            return Response(
+                {"status": "error", "message": "Missing document_id"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        user = request.user
+
+        if user.user_type not in ['power', 'admin']:
+            return Response(
+                {"status": "error", "message": "Only power users and admins can generate PDF documents"},
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+        try:
+            decrypted_id = decrypt_id(document_id)
+            doc = get_object_or_404(Document, id=decrypted_id)
+
+            if user.user_type != 'admin' and doc.userid_id != user.id:
+                return Response(
+                    {"error": "You do not have permission to process this document."},
+                    status=status.HTTP_403_FORBIDDEN,
+                )
+
+            if not doc.html_data:
+                return Response(
+                    {"status": "error", "message": "No HTML data available for this document."},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            # Generate PDF (no CSS)
+            try:
+                from weasyprint import HTML
+                from weasyprint.text.fonts import FontConfiguration
+                from bs4 import BeautifulSoup
+
+                soup = BeautifulSoup(doc.html_data, 'html.parser')
+                body = soup.find('body')
+                html_content = str(body) if body else doc.html_data
+
+                font_config = FontConfiguration()
+                html = HTML(string=html_content)
+                pdf_bytes = html.write_pdf(font_config=font_config)
+
+                response = HttpResponse(pdf_bytes, content_type='application/pdf')
+                filename = f"document_{decrypted_id}.pdf"
+                response['Content-Disposition'] = f'attachment; filename="{filename}"'
+                return response
+
+            except (ImportError, OSError):
+                # Fallback: ReportLab
+               
+                soup = BeautifulSoup(doc.html_data, 'html.parser')
+                buffer = BytesIO()
+                doc_pdf = SimpleDocTemplate(buffer)
+                story = []
+                styles = getSampleStyleSheet()
+                normal = styles['Normal']
+
+                for element in soup.find_all(['p', 'h1', 'h2', 'h3', 'ul', 'ol', 'table']):
+                    if element.name == 'p':
+                        story.append(Paragraph(element.get_text(), normal))
+                        story.append(Spacer(1, 12))
+                    elif element.name in ['ul', 'ol']:
+                        for li in element.find_all('li'):
+                            story.append(Paragraph("• " + li.get_text(), normal))
+                            story.append(Spacer(1, 6))
+                    elif element.name == 'table':
+                        rows = element.find_all('tr')
+                        data = [[cell.get_text().strip() for cell in row.find_all(['td', 'th'])] for row in rows]
+                        table = Table(data)
+                        table.setStyle(TableStyle([
+                            ('GRID', (0, 0), (-1, -1), 1, colors.black)
+                        ]))
+                        story.append(table)
+                        story.append(Spacer(1, 12))
+
+                doc_pdf.build(story)
+                pdf_bytes = buffer.getvalue()
+                buffer.close()
+
+                response = HttpResponse(pdf_bytes, content_type='application/pdf')
+                filename = f"document_{decrypted_id}.pdf"
+                response['Content-Disposition'] = f'attachment; filename="{filename}"'
+                return response
+
+        except Exception as e:
+            logger.error(f"Error in GeneratePDFView: {str(e)}", exc_info=True)
+            return Response(
+                {"status": "error", "message": f"An error occurred: {str(e)}"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+
+class GenerateDOCView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        document_id = request.data.get("document_id")
+
+        if not document_id:
+            return Response(
+                {"status": "error", "message": "Missing document_id"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        user = request.user
+
+        if user.user_type not in ['power', 'admin']:
+            return Response(
+                {"status": "error", "message": "Only power users and admins can generate DOC documents"},
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+        try:
+            decrypted_id = decrypt_id(document_id)
+            doc = get_object_or_404(Document, id=decrypted_id)
+
+            if user.user_type != 'admin' and doc.userid_id != user.id:
+                return Response(
+                    {"error": "You do not have permission to process this document."},
+                    status=status.HTTP_403_FORBIDDEN,
+                )
+
+            if not doc.html_data:
+                return Response(
+                    {"status": "error", "message": "No HTML data available for this document."},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            from docx import Document as DocxDocument
+            from bs4 import BeautifulSoup
+            from io import BytesIO
+
+            soup = BeautifulSoup(doc.html_data, 'html.parser')
+            document = DocxDocument()
+
+            document.add_heading('Document Export', 0)
+
+            for element in soup.find_all(['p', 'h1', 'h2', 'h3', 'ul', 'ol', 'table']):
+                if element.name.startswith('h'):
+                    level = int(element.name[1])
+                    document.add_heading(element.get_text(), level)
+                elif element.name == 'p':
+                    document.add_paragraph(element.get_text())
+                elif element.name in ['ul', 'ol']:
+                    for li in element.find_all('li'):
+                        document.add_paragraph(li.get_text(), style='ListBullet')
+                elif element.name == 'table':
+                    rows = element.find_all('tr')
+                    if rows:
+                        cols = len(rows[0].find_all(['td', 'th']))
+                        table = document.add_table(rows=len(rows), cols=cols)
+                        table.style = 'Table Grid'
+                        for i, row in enumerate(rows):
+                            cells = row.find_all(['td', 'th'])
+                            for j, cell in enumerate(cells):
+                                table.cell(i, j).text = cell.get_text().strip()
+
+            buffer = BytesIO()
+            document.save(buffer)
+            buffer.seek(0)
+
+            response = HttpResponse(
+                buffer.getvalue(),
+                content_type='application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+            )
+            filename = f"document_{decrypted_id}.docx"
+            response['Content-Disposition'] = f'attachment; filename="{filename}"'
+            return response
+
+        except Exception as e:
+            logger.error(f"Error in GenerateDOCView: {str(e)}", exc_info=True)
             return Response(
                 {"status": "error", "message": f"An error occurred: {str(e)}"},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR

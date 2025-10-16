@@ -19,8 +19,20 @@ const PasswordResetRequest = () => {
     try {
       const data = await apiService.requestPasswordReset(value);
       setMessage(data.detail || 'Reset link sent. Check your email.');
-    } catch (err) {
-      handleError(err, 'Failed to send reset link');
+    } catch (err: any) {
+      // If backend returns 400 and message about invalid email/username, show only 'Email ID does not exist'
+      if (err?.status === 400 && err?.message) {
+        // Remove any 'Bad Request' prefix from the message
+        if (err.message.toLowerCase().includes('invalid')) {
+          setMessage('Email ID does not exist');
+        } else {
+          // If message contains 'Email ID does not exist' with extra text, clean it
+          const cleaned = err.message.replace(/bad request:?\s*/i, '').trim();
+          setMessage(cleaned || 'Email ID does not exist');
+        }
+      } else {
+        handleError(err, 'Email ID does not exist');
+      }
     } finally {
       setIsLoading(false);
     }
@@ -42,7 +54,13 @@ const PasswordResetRequest = () => {
               required
             />
           </div>
-          {message && <div className="sign-in-text">{message}</div>}
+          {message && (
+            <div className="sign-in-text">
+              {message === 'Email ID does not exist' ? (
+                <b style={{ color: 'red' }}>{message}</b>
+              ) : message}
+            </div>
+          )}
           <button type="submit" className="btn-primary" disabled={isLoading}>
             {isLoading ? 'Sending...' : 'Send reset link'}
           </button>
